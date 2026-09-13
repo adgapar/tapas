@@ -10,7 +10,7 @@ Each tapa is a real Spanish word that also reads as English and names the job. [
 
 | Tapa | What it is | Status |
 | --- | --- | --- |
-| **Dictado** | Hotkey dictation. Overlay, paste into the focused app. | v1, designing |
+| **Dictado** | Hotkey dictation. Overlay, paste into the focused app. | v1, in tree |
 | **Acta** | Meeting transcript with no bot in the call. Local file Claude or Codex can read. | next |
 | **Captura** | "Screenshot this page" by voice. PNG + note in the Tapas folder. | later |
 | **Consulta** | Voice file search on disk. | later |
@@ -25,7 +25,14 @@ Desert Ant's Voz is NVIDIA Parakeet TDT 0.6B v3 on the Neural Engine. Live words
 
 ## Repo
 
-There is no app in this repo yet.
+Menu-bar app plus a testable `TapasCore` library. Xcode is not required.
+
+```sh
+swift test
+Scripts/package-app.sh   # writes dist/Tapas.app
+```
+
+Press Right ⌘ to start, Right ⌘ again to paste. History lands in `~/Documents/tapas/dictado/`. First launch downloads Voz (~467 MB) and specialises it on the Neural Engine.
 
 - [`docs/naming.md`](docs/naming.md) — how tapas get named
 - [`NOTICE.md`](NOTICE.md) — Desert Ant license and attribution

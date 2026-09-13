@@ -89,6 +89,10 @@ public protocol TextPaster: Sendable {
     func paste(_ text: String) async throws
 }
 
+public struct AccessibilityDenied: Error, Equatable {
+    public init() {}
+}
+
 public protocol Microphone: Sendable {
     var isAuthorized: Bool { get async }
     func start() async throws

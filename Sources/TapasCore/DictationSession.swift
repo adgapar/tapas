@@ -166,6 +166,11 @@ public actor DictationSession {
                 )
             }
             overlay = OverlaySnapshot()
+        } catch is AccessibilityDenied {
+            overlay = OverlaySnapshot(
+                isVisible: true,
+                message: OverlayCopy.message(for: .accessibilityDenied)
+            )
         } catch {
             overlay = OverlaySnapshot()
         }
