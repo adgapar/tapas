@@ -1,4 +1,8 @@
 # Internal notes. Stay on this machine.
 /private/
 
+.build/
+.swiftpm/
+dist/
+*.xcodeproj
 .DS_Store
