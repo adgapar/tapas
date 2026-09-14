@@ -7,7 +7,7 @@ public struct PauseDetector: Sendable {
     }
 
     public static let pauseDuration: TimeInterval = 0.40
-    public static let rmsThreshold: Float = 0.01
+    public static let rmsThreshold: Float = 0.003
     public static let frameDuration: TimeInterval = 0.020
 
     private let sampleRate: Double

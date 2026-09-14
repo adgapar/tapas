@@ -39,6 +39,7 @@ public actor DictationSession {
     private var detector: PauseDetector
     private var lastLanguage: String?
     private var startedAt: Date?
+    private var samplesSinceChunk = 0
 
     public init(
         pipeline: TranscriptionPipeline,
@@ -61,7 +62,12 @@ public actor DictationSession {
 
     public func snapshot() -> OverlaySnapshot { overlay }
 
+    private var toggling = false
+
     public func toggle() async {
+        if toggling { return }
+        toggling = true
+        defer { toggling = false }
         if listening {
             await stop()
             return
@@ -81,31 +87,43 @@ public actor DictationSession {
             )
             return
         }
-        listening = true
         buffer = []
+        samplesSinceChunk = 0
         detector = PauseDetector(sampleRate: sampleRate)
         startedAt = now()
-        overlay = OverlaySnapshot(isVisible: true)
         do {
             try await microphone.start()
+            listening = true
+            overlay = OverlaySnapshot(isVisible: true)
         } catch {
             listening = false
-            overlay = OverlaySnapshot(
-                isVisible: true,
-                message: OverlayCopy.message(for: .microphoneDenied)
-            )
+            overlay = OverlaySnapshot()
+            _ = await microphone.stop()
         }
+    }
+
+    public func silence() async {
+        listening = false
+        _ = await microphone.stop()
+        overlay = OverlaySnapshot()
+        buffer = []
     }
 
     public func ingest(samples: [Float], sampleRate: Double) async {
         guard listening else { return }
         buffer.append(contentsOf: samples)
+        samplesSinceChunk += samples.count
         let event = detector.feed(samples)
         switch event {
         case .speech(let rms):
             overlay.rms = rms
+            if samplesSinceChunk >= Int(sampleRate * 1.2) {
+                samplesSinceChunk = 0
+                await transcribeChunk()
+            }
         case .pause:
             overlay.rms = 0
+            samplesSinceChunk = 0
             await transcribeChunk()
         }
     }
@@ -152,7 +170,7 @@ public actor DictationSession {
             }
             let tapa = Orden.classify(text)
             overlay.committedText = text
-            overlay.isVisible = true
+            overlay.isVisible = false
             overlay.message = nil
             if tapa == .dictado {
                 try await paster.paste(text)

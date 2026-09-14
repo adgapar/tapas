@@ -7,6 +7,10 @@ final class MenuBarController: NSObject {
     private let settings: TapasSettings
     var onQuit: (() -> Void)?
     var onRevealHistory: (() -> Void)?
+    var onSetup: (() -> Void)?
+    var onPickHotkey: ((Hotkey) -> Void)?
+    var onRecordHotkey: (() -> Void)?
+    var hotkeyLabel: () -> String = { Hotkey.standard.label }
 
     init(settings: TapasSettings) {
         self.settings = settings
@@ -33,7 +37,23 @@ final class MenuBarController: NSObject {
             }
         }
         menu.addItem(.separator())
-        let overlayOn = UserDefaults.standard.object(forKey: "overlayEnabled") as? Bool ?? true
+        let setupItem = NSMenuItem(title: "Setup…", action: #selector(openSetup), keyEquivalent: "")
+        setupItem.target = self
+        menu.addItem(setupItem)
+        let hotkeyItem = NSMenuItem(title: "Hotkey: \(hotkeyLabel())", action: nil, keyEquivalent: "")
+        let hotkeyMenu = NSMenu()
+        let controlOption = NSMenuItem(title: "Control-Option", action: #selector(pickControlOption), keyEquivalent: "")
+        controlOption.target = self
+        hotkeyMenu.addItem(controlOption)
+        let rightCommand = NSMenuItem(title: "Right Command", action: #selector(pickRightCommand), keyEquivalent: "")
+        rightCommand.target = self
+        hotkeyMenu.addItem(rightCommand)
+        let record = NSMenuItem(title: "Press a new shortcut…", action: #selector(recordHotkey), keyEquivalent: "")
+        record.target = self
+        hotkeyMenu.addItem(record)
+        hotkeyItem.submenu = hotkeyMenu
+        menu.addItem(hotkeyItem)
+        let overlayOn = UserDefaults.standard.object(forKey: "overlayEnabled") as? Bool ?? false
         let overlay = NSMenuItem(title: "Overlay", action: #selector(toggleOverlay(_:)), keyEquivalent: "")
         overlay.target = self
         overlay.state = overlayOn ? .on : .off
@@ -71,9 +91,25 @@ final class MenuBarController: NSObject {
     }
 
     @objc private func toggleOverlay(_ sender: NSMenuItem) {
-        let overlayOn = UserDefaults.standard.object(forKey: "overlayEnabled") as? Bool ?? true
+        let overlayOn = UserDefaults.standard.object(forKey: "overlayEnabled") as? Bool ?? false
         UserDefaults.standard.set(!overlayOn, forKey: "overlayEnabled")
         sender.state = overlayOn ? .off : .on
+    }
+
+    @objc private func openSetup() {
+        onSetup?()
+    }
+
+    @objc private func pickControlOption() {
+        onPickHotkey?(.standard)
+    }
+
+    @objc private func pickRightCommand() {
+        onPickHotkey?(.rightCommand)
+    }
+
+    @objc private func recordHotkey() {
+        onRecordHotkey?()
     }
 
     @objc private func revealHistory() {

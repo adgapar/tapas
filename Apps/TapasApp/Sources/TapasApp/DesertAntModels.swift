@@ -48,8 +48,12 @@ actor DesertCatalog: ModelCatalog {
     private var fraction: Double = 0
     private var specialized = false
 
+    var isDownloaded: Bool {
+        Voz.isDownloaded() && Ear.isDownloaded() && Uhm.isDownloaded()
+    }
+
     var isReady: Bool {
-        Voz.isDownloaded() && Ear.isDownloaded() && Uhm.isDownloaded() && specialized
+        isDownloaded && specialized
     }
 
     var downloadFraction: Double { fraction }
@@ -71,7 +75,9 @@ actor DesertCatalog: ModelCatalog {
             }
         }
         fraction = 0.9
-        _ = try await Voz()
+        _ = try await Task.detached {
+            try await Voz()
+        }.value
         specialized = true
         fraction = 1
     }

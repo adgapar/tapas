@@ -4,7 +4,7 @@ A plate of small, on-device AI tools for Mac. Dictation first. More later.
 
 Built so Claude, Codex, and Cursor can use what you capture. Files in `~/Documents/tapas/` first, then a skill/MCP. The Mac app is not another chat.
 
-Each tapa is a real Spanish word that also reads as English and names the job. [Naming rules](docs/naming.md). Under the hood, a few [Desert Ant](https://desertant.com) models chained together. Nothing leaves the machine.
+Under the hood, a few [Desert Ant](https://desertant.com) models chained together. Nothing leaves the machine.
 
 ## The plate
 
@@ -19,7 +19,7 @@ Dictado transcribes 25 European languages on device (Voz / Parakeet TDT 0.6B v3)
 
 ## How the hotkey should feel
 
-Press Right ⌘. A small overlay shows words as you talk. Press Right ⌘ again. Every take goes through **Orden** (a feature, not a tapa): transcribe, then pick the tapa. Prose is Dictado and lands where the cursor is. "Create screenshot of this" is Captura. "Find me that PDF" is Consulta.
+Press Control-Option (changeable in the menu). A small overlay shows words as you talk. Press it again. Every take goes through **Orden** (a feature, not a tapa): transcribe, then pick the tapa. Prose is Dictado and lands where the cursor is. "Create screenshot of this" is Captura. "Find me that PDF" is Consulta.
 
 Desert Ant's Voz is NVIDIA Parakeet TDT 0.6B v3 on the Neural Engine. Live words come from transcribing at pauses, not from a streaming graph.
 
@@ -32,9 +32,8 @@ swift test
 Scripts/package-app.sh   # writes dist/Tapas.app
 ```
 
-Press Right ⌘ to start, Right ⌘ again to paste. History lands in `~/Documents/tapas/dictado/`. First launch downloads Voz (~467 MB) and specialises it on the Neural Engine.
+Open the app, then finish **Setup** in the window: microphone, Accessibility, model download. After that, Control-Option starts a take and the same shortcut pastes. History lands in `~/Documents/tapas/dictado/`.
 
-- [`docs/naming.md`](docs/naming.md) — how tapas get named
 - [`NOTICE.md`](NOTICE.md) — Desert Ant license and attribution
 
 ## License

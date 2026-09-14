@@ -6,28 +6,38 @@ public enum OverlayCopy {
         case .microphoneDenied:
             return "Microphone is off. Open System Settings to allow Tapas."
         case .accessibilityDenied:
-            return "Accessibility is off. Open System Settings so Tapas can paste."
+            return "Turn Tapas on in Accessibility. I'll wait here."
         case .modelNotReady:
-            return "Downloading Voz…"
+            return "Hiring the kitchen…"
         case .emptyClip:
-            return nil
+            return "Too short. Talk, then press again."
         }
+    }
+}
+
+public enum SetupGate {
+    public static func message(trusted: Bool, tapStarted: Bool) -> String? {
+        if tapStarted { return nil }
+        if trusted {
+            return "That's on. Quit Tapas from the menu bar and open it once more — macOS is picky."
+        }
+        return OverlayCopy.message(for: .accessibilityDenied)
     }
 }
 
 public struct TapasSettings: Equatable, Sendable {
     public var overlayEnabled: Bool
     public var historyDirectory: URL
-    public var hotkeyKeyCode: UInt16
+    public var hotkey: Hotkey
 
     public init(
-        overlayEnabled: Bool = true,
+        overlayEnabled: Bool = false,
         historyDirectory: URL = Self.defaultHistoryDirectory,
-        hotkeyKeyCode: UInt16 = RightCommandTapper.rightCommand
+        hotkey: Hotkey = .standard
     ) {
         self.overlayEnabled = overlayEnabled
         self.historyDirectory = historyDirectory
-        self.hotkeyKeyCode = hotkeyKeyCode
+        self.hotkey = hotkey
     }
 
     public static var defaultHistoryDirectory: URL {

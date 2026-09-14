@@ -4,8 +4,10 @@ import Foundation
 import TapasCore
 
 func promptAccessibilityTrust() {
-    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-    _ = AXIsProcessTrustedWithOptions(options)
+    let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+    if let url {
+        NSWorkspace.shared.open(url)
+    }
 }
 
 final class AppPasteboard: TapasCore.Pasteboard, @unchecked Sendable {

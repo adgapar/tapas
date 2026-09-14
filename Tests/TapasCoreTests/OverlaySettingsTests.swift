@@ -8,8 +8,21 @@ import Testing
     )
 }
 
-@Test func emptyClipHasNoMessage() {
-    #expect(OverlayCopy.message(for: .emptyClip) == nil)
+@Test func emptyClipAsksToTalkAgain() {
+    #expect(OverlayCopy.message(for: .emptyClip) == "Too short. Talk, then press again.")
+}
+
+@Test func setupGateKeepsWaitingWhenAccessibilityIsOff() {
+    #expect(SetupGate.message(trusted: false, tapStarted: false) == OverlayCopy.message(for: .accessibilityDenied))
+}
+
+@Test func setupGateAsksForRelaunchWhenTrustedButTapFailed() {
+    let text = SetupGate.message(trusted: true, tapStarted: false)
+    #expect(text?.contains("Quit Tapas") == true)
+}
+
+@Test func setupGateIsSilentWhenTapWorks() {
+    #expect(SetupGate.message(trusted: true, tapStarted: true) == nil)
 }
 
 @Test func defaultHistoryDirectoryEndsWithDictado() {

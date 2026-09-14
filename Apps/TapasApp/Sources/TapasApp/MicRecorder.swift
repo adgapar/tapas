@@ -7,6 +7,7 @@ final class MicRecorder: Microphone, @unchecked Sendable {
 
     private let engine = AVAudioEngine()
     private let sampleRate: Double = 16_000
+    private var buffersLogged = 0
 
     var isAuthorized: Bool {
         get async {
@@ -14,40 +15,111 @@ final class MicRecorder: Microphone, @unchecked Sendable {
         }
     }
 
-    func start() async throws {
-        let granted: Bool
-        if AVCaptureDevice.authorizationStatus(for: .audio) == .authorized {
-            granted = true
-        } else {
-            granted = await AVCaptureDevice.requestAccess(for: .audio)
+    func requestAuthorization() async -> Bool {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            return true
+        case .denied, .restricted:
+            return false
+        default:
+            return await AVCaptureDevice.requestAccess(for: .audio)
         }
-        guard granted else { throw CancellationError() }
+    }
 
+    func start() async throws {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .authorized:
+            break
+        case .denied, .restricted:
+            tapasLog("mic denied")
+            throw CancellationError()
+        default:
+            let granted = await AVCaptureDevice.requestAccess(for: .audio)
+            guard granted else {
+                tapasLog("mic denied")
+                throw CancellationError()
+            }
+        }
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            DispatchQueue.main.async {
+                do {
+                    try self.startEngine()
+                    cont.resume()
+                } catch {
+                    cont.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    func stop() async -> [Float] {
+        await withCheckedContinuation { (cont: CheckedContinuation<Void, Never>) in
+            DispatchQueue.main.async {
+                self.stopEngine()
+                cont.resume()
+            }
+        }
+        return []
+    }
+
+    private func startEngine() throws {
         let input = engine.inputNode
-        let inputFormat = input.inputFormat(forBus: 0)
+        if engine.isRunning {
+            input.removeTap(onBus: 0)
+            engine.stop()
+        }
+        try engine.start()
+        var hardware = input.inputFormat(forBus: 0)
+        if hardware.sampleRate < 1 {
+            hardware = input.outputFormat(forBus: 0)
+        }
+        tapasLog("mic format sr=\(hardware.sampleRate) ch=\(hardware.channelCount)")
+        guard hardware.sampleRate >= 1, hardware.channelCount >= 1 else {
+            engine.stop()
+            tapasLog("mic format invalid")
+            throw CancellationError()
+        }
+        input.removeTap(onBus: 0)
         guard let outputFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: sampleRate,
             channels: 1,
             interleaved: false
         ) else {
+            engine.stop()
             throw CancellationError()
         }
-        let converter = AVAudioConverter(from: inputFormat, to: outputFormat)
-        input.removeTap(onBus: 0)
-        input.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
-            guard let converter, let converted = Self.convert(buffer, converter: converter, outputFormat: outputFormat) else { return }
-            guard let channel = converted.floatChannelData?[0] else { return }
-            let samples = Array(UnsafeBufferPointer(start: channel, count: Int(converted.frameLength)))
-            self?.onSamples?(samples)
+        buffersLogged = 0
+        let sink = onSamples
+        input.installTap(onBus: 0, bufferSize: 2048, format: hardware) { [weak self] buffer, _ in
+            Self.deliver(buffer: buffer, outputFormat: outputFormat, recorder: self, sink: sink)
         }
-        try engine.start()
+        tapasLog("mic started")
     }
 
-    func stop() async -> [Float] {
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
-        return []
+    private static func deliver(
+        buffer: AVAudioPCMBuffer,
+        outputFormat: AVAudioFormat,
+        recorder: MicRecorder?,
+        sink: (@Sendable ([Float]) -> Void)?
+    ) {
+        guard let converter = AVAudioConverter(from: buffer.format, to: outputFormat) else { return }
+        guard let converted = convert(buffer, converter: converter, outputFormat: outputFormat) else { return }
+        guard let channel = converted.floatChannelData?[0] else { return }
+        let samples = Array(UnsafeBufferPointer(start: channel, count: Int(converted.frameLength)))
+        if let recorder, recorder.buffersLogged < 8 {
+            recorder.buffersLogged += 1
+            tapasLog("mic #\(recorder.buffersLogged) n=\(samples.count) rms=\(PauseDetector.rms(samples))")
+        }
+        sink?(samples)
+    }
+
+    private func stopEngine() {
+        tapasLog("mic stop")
+        if engine.isRunning {
+            engine.inputNode.removeTap(onBus: 0)
+            engine.stop()
+        }
     }
 
     private static func convert(
@@ -55,14 +127,15 @@ final class MicRecorder: Microphone, @unchecked Sendable {
         converter: AVAudioConverter,
         outputFormat: AVAudioFormat
     ) -> AVAudioPCMBuffer? {
-        let ratio = outputFormat.sampleRate / buffer.format.sampleRate
+        let inRate = max(buffer.format.sampleRate, 1)
+        let ratio = outputFormat.sampleRate / inRate
         let frames = AVAudioFrameCount((Double(buffer.frameLength) * ratio).rounded(.up))
         guard let out = AVAudioPCMBuffer(pcmFormat: outputFormat, frameCapacity: max(frames, 1)) else { return nil }
         var error: NSError?
         var consumed = false
         converter.convert(to: out, error: &error) { _, status in
             if consumed {
-                status.pointee = .endOfStream
+                status.pointee = .noDataNow
                 return nil
             }
             consumed = true
