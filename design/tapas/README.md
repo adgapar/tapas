@@ -1,5 +1,9 @@
 # Tapas · Pintxo / Gráfico
 
+**Small tools. Good company.**
+
+Tapas’s main brand line pairs the usefulness of small AI tools with the warmth of sharing tapas. Use this wording consistently; uppercase and a line break between the sentences are welcome in visual layouts.
+
 The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
 
 ## Preview

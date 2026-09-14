@@ -1,5 +1,7 @@
 # Tapas
 
+**Small tools. Good company.**
+
 A plate of small, on-device AI tools for Mac. Dictation first. More later.
 
 Built so Claude, Codex, and Cursor can use what you capture. Files in `~/Documents/tapas/` first, then a skill/MCP. The Mac app is not another chat.
@@ -35,6 +37,7 @@ Scripts/package-app.sh   # writes dist/Tapas.app
 Open the app, then finish **Setup** in the window: microphone, Accessibility, model download. After that, Control-Option starts a take and the same shortcut pastes. History lands in `~/Documents/tapas/dictado/`.
 
 - [`NOTICE.md`](NOTICE.md) — Desert Ant license and attribution
+- [Design direction and prototype](design/tapas/README.md) — Pintxo / Gráfico, onboarding and product behaviors
 
 ## License
 

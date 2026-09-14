@@ -4,6 +4,8 @@ This document records the selected interaction design alongside the [interactive
 
 ## One shared home
 
+“Small tools. Good company.” is the main brand line. It introduces the collection with warmth; individual tool screens use concrete copy to explain what happens next.
+
 Tapas is a collection of small tools that produce useful results where the user already works. The pintxo joins them into one identity. Each tool has a simple glyph and a recognizable ingredient color: Dictado saffron, Acta cobalt, Captura paprika, Consulta olive.
 
 The menu-bar home, “Your plate,” contains Tools, Recent and Preferences. Dictado is the first available tool. Acta is marked Next; Captura and Consulta are marked Later. In this design preview their cards open interactive concepts. Native release builds should distinguish shipped tools from previews just as clearly.
