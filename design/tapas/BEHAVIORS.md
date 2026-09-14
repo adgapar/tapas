@@ -2,6 +2,8 @@
 
 This document records the selected interaction design alongside the [interactive prototype](index.html). These are design decisions and proposed future behaviors, not claims that the native app implements every flow.
 
+Dictado now has a native implementation of this direction. [IMPLEMENTATION.md](IMPLEMENTATION.md) records the implementation details and verification boundary. The flows below continue to describe the browser reference, including its simulated future tools.
+
 ## One shared home
 
 “Small tools. Good company.” is the main brand line. It introduces the collection with warmth; individual tool screens use concrete copy to explain what happens next.

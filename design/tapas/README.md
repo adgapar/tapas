@@ -6,6 +6,8 @@ Tapas’s main brand line pairs the usefulness of small AI tools with the warmth
 
 The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
 
+The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta remains a concept for its next iteration.
+
 ## Preview
 
 From the repository root:
@@ -37,8 +39,9 @@ The pintxo assembles during setup, separates while listening, shifts while worki
 - [style.css](style.css): Gráfico design, motion and responsive layouts.
 - [app.js](app.js): connected interactions and sample content.
 - [icon.svg](icon.svg): selected faceless pintxo mark.
+- [IMPLEMENTATION.md](IMPLEMENTATION.md): native Dictado implementation and verification.
 - [BEHAVIORS.md](BEHAVIORS.md): flow decisions, recovery behavior and native implementation boundaries.
 
-This is a browser design prototype, not a native-app implementation. Speech, permissions, model preparation, app audio, capture and file search are simulated. Sample data and preferences stay in memory until reload. Explicit export buttons download sample Markdown; copy buttons use the browser clipboard. Nothing records audio or reads your folders.
+In the browser prototype, speech, permissions, model preparation, app audio, capture and file search are simulated. Sample data and preferences stay in memory until reload. Explicit export buttons download sample Markdown; copy buttons use the browser clipboard. Nothing records audio or reads your folders.
 
 Dictado is the first product. Acta is next; Captura and Consulta are later concepts, labeled accordingly throughout the preview.

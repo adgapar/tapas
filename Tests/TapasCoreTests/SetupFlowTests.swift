@@ -100,5 +100,5 @@ import Testing
             #expect(!blob.contains(leak), "\(phase) leaked \(leak)")
         }
     }
-    #expect(OverlayCopy.message(for: .modelNotReady(fraction: 0.2)) == "Hiring the kitchen…")
+    #expect(OverlayCopy.message(for: .modelNotReady(fraction: 0.2)) == "Prepare the voice models in Setup to start Dictado.")
 }

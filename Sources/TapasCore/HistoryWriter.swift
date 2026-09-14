@@ -14,7 +14,7 @@ public struct HistoryWriter: Sendable {
     public func write(_ record: HistoryRecord) async throws -> URL {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let name = Self.filename(for: record.startedAt, calendar: calendar)
-        let url = directory.appendingPathComponent(name)
+        var url = directory.appendingPathComponent(name)
         let redacted = try await redactor.redact(record.pastedText)
         let iso = ISO8601DateFormatter().string(from: record.startedAt)
         let language = record.language ?? ""
@@ -27,7 +27,16 @@ public struct HistoryWriter: Sendable {
 
         \(redacted)
         """
-        try markdown.write(to: url, atomically: true, encoding: .utf8)
+        // Exclusive creation prevents both rapid takes and concurrent writers overwriting notes.
+        let data = Data(markdown.utf8)
+        while true {
+            do {
+                try data.write(to: url, options: .withoutOverwriting)
+                break
+            } catch CocoaError.fileWriteFileExists {
+                url = directory.appendingPathComponent("\(name.dropLast(3))-\(UUID().uuidString.prefix(8)).md")
+            }
+        }
         return url
     }
 

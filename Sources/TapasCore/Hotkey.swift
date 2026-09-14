@@ -87,7 +87,11 @@ public struct HotkeyTapper: Sendable {
         self.hotkey = hotkey
     }
 
-    public mutating func handle(_ event: KeyEvent) -> Bool {
+    public mutating func handle(_ event: KeyEvent, modifiers: KeyModifiers? = nil) -> Bool {
+        if case .down(let code, let isRepeat) = event {
+            if isRepeat { return false }
+            if let modifiers, hotkey.keyCode == code, code != 54, modifiers != hotkey.modifiers { return false }
+        }
         if hotkey.isModifierOnly {
             if case .down(let code, _) = event, pending, !Hotkey.isModifierKey(code) {
                 chorded = true

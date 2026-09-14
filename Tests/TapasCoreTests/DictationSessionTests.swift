@@ -85,7 +85,7 @@ func quiet() -> [Float] { [Float](repeating: 0, count: 320) }
     let session = makeSession(ready: false, paster: paster, directory: try tempDir())
     await session.toggle()
     #expect(paster.pasted.isEmpty)
-    #expect(await session.snapshot().message == "Hiring the kitchen…")
+    #expect(await session.snapshot().message == "Prepare the voice models in Setup to start Dictado.")
 }
 
 @Test func micDeniedShowsMessage() async throws {

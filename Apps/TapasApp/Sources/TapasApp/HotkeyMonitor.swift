@@ -7,13 +7,14 @@ import TapasCore
 final class HotkeyMonitor: @unchecked Sendable {
     nonisolated(unsafe) static var shared: HotkeyMonitor?
 
+    var onCancel: (@Sendable () -> Void)?
     var onTap: (@Sendable () -> Void)?
     var onRecorded: (@Sendable (Hotkey) -> Void)?
     var onRecordCancelled: (@Sendable () -> Void)?
     var recording = false
 
     var hotkey: Hotkey = .standard {
-        didSet { tapper.hotkey = hotkey }
+        didSet { tapper = HotkeyTapper(hotkey: hotkey) }
     }
 
     private var tapper = HotkeyTapper(hotkey: .standard)
@@ -30,7 +31,7 @@ final class HotkeyMonitor: @unchecked Sendable {
         HotkeyMonitor.shared = self
         if localMonitor != nil { return }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
-            self?.handleNSEvent(event)
+            if self?.port == nil { self?.handleNSEvent(event) }
             return event
         }
     }
@@ -39,7 +40,7 @@ final class HotkeyMonitor: @unchecked Sendable {
     func startTapIfTrusted() -> Bool {
         installLocalMonitor()
         guard AXIsProcessTrusted() else { return false }
-        if port != nil { return true }
+        if let port { CGEvent.tapEnable(tap: port, enable: true); return true }
         if tapAttempted { return false }
         tapAttempted = true
         let mask = (1 << CGEventType.keyDown.rawValue)
@@ -62,11 +63,6 @@ final class HotkeyMonitor: @unchecked Sendable {
         self.source = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)
-        if globalMonitor == nil {
-            globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
-                self?.handleNSEvent(event)
-            }
-        }
         return true
     }
 
@@ -93,7 +89,7 @@ final class HotkeyMonitor: @unchecked Sendable {
         case .flagsChanged: type = .flagsChanged
         default: return
         }
-        _ = consider(type: type, code: code, modifiers: modifiers, isRepeat: event.isARepeat)
+        _ = consider(type: type, code: code, modifiers: modifiers, isRepeat: event.type == .keyDown && event.isARepeat)
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -129,12 +125,13 @@ final class HotkeyMonitor: @unchecked Sendable {
             return false
         }
 
+        if code == 53, type == .keyDown, !isRepeat { onCancel?(); return false }
         let toggled: Bool
         switch type {
         case .keyDown:
-            toggled = tapper.handle(.down(code: code, isRepeat: isRepeat))
+            toggled = tapper.handle(.down(code: code, isRepeat: isRepeat), modifiers: modifiers)
         case .keyUp:
-            toggled = tapper.handle(.up(code: code))
+            toggled = tapper.handle(.up(code: code), modifiers: modifiers)
         case .flagsChanged:
             toggled = tapper.handleFlags(code: code, modifiers: modifiers)
         default:
@@ -144,6 +141,14 @@ final class HotkeyMonitor: @unchecked Sendable {
             fire()
         }
         return false
+    }
+
+    func stop() {
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
+        if let port { CFMachPortInvalidate(port) }
+        localMonitor = nil; globalMonitor = nil; source = nil; port = nil
     }
 
     private func fire() {

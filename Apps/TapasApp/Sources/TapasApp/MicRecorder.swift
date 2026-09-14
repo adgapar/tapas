@@ -8,6 +8,8 @@ final class MicRecorder: Microphone, @unchecked Sendable {
     private let engine = AVAudioEngine()
     private let sampleRate: Double = 16_000
     private var buffersLogged = 0
+    private let sampleLock = NSLock()
+    private var recordedSamples: [Float] = []
 
     var isAuthorized: Bool {
         get async {
@@ -59,7 +61,11 @@ final class MicRecorder: Microphone, @unchecked Sendable {
                 cont.resume()
             }
         }
-        return []
+        return sampleLock.withLock {
+            let result = recordedSamples
+            recordedSamples = []
+            return result
+        }
     }
 
     private func startEngine() throws {
@@ -89,24 +95,30 @@ final class MicRecorder: Microphone, @unchecked Sendable {
             engine.stop()
             throw CancellationError()
         }
+        guard let converter = AVAudioConverter(from: hardware, to: outputFormat) else {
+            engine.stop()
+            throw CancellationError()
+        }
+        sampleLock.withLock { recordedSamples = [] }
         buffersLogged = 0
         let sink = onSamples
         input.installTap(onBus: 0, bufferSize: 2048, format: hardware) { [weak self] buffer, _ in
-            Self.deliver(buffer: buffer, outputFormat: outputFormat, recorder: self, sink: sink)
+            Self.deliver(buffer: buffer, converter: converter, outputFormat: outputFormat, recorder: self, sink: sink)
         }
         tapasLog("mic started")
     }
 
     private static func deliver(
         buffer: AVAudioPCMBuffer,
+        converter: AVAudioConverter,
         outputFormat: AVAudioFormat,
         recorder: MicRecorder?,
         sink: (@Sendable ([Float]) -> Void)?
     ) {
-        guard let converter = AVAudioConverter(from: buffer.format, to: outputFormat) else { return }
         guard let converted = convert(buffer, converter: converter, outputFormat: outputFormat) else { return }
         guard let channel = converted.floatChannelData?[0] else { return }
         let samples = Array(UnsafeBufferPointer(start: channel, count: Int(converted.frameLength)))
+        recorder?.sampleLock.withLock { recorder?.recordedSamples.append(contentsOf: samples) }
         if let recorder, recorder.buffersLogged < 8 {
             recorder.buffersLogged += 1
             tapasLog("mic #\(recorder.buffersLogged) n=\(samples.count) rms=\(PauseDetector.rms(samples))")

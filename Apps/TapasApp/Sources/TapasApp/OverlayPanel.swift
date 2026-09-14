@@ -1,17 +1,67 @@
 import AppKit
+import SwiftUI
 import TapasCore
 
-final class OverlayPanel: NSPanel {
-    private let textField = NSTextField(labelWithString: "")
-    private let meter = NSView()
+@MainActor @Observable
+final class OverlayModel {
+    var snapshot = OverlaySnapshot()
+    var shortcut = Hotkey.standard.label
+    var notice: String?
+}
 
+struct DictadoOverlay: View {
+    @Bindable var model: OverlayModel
+    var actions: PlateActions
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                PintxoMark(phase: model.snapshot.phase).frame(width: 28, height: 40)
+                Eyebrow(text: "Dictado / \(label)")
+                Spacer()
+                if model.snapshot.phase == .listening {
+                    ProgressView(value: min(1, Double(model.snapshot.rms) * 8)).tint(Grafico.olive).frame(width: 70)
+                }
+            }
+            if let notice = model.notice { Text(notice).font(.system(size: 11)).foregroundStyle(Grafico.olive) }
+            if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
+                ScrollView { ResultView(snapshot: model.snapshot, actions: actions) }.frame(maxHeight: 290)
+                if model.snapshot.committedText.isEmpty { Button("Open setup", action: actions.setup).buttonStyle(.plain) }
+            } else {
+                Text(model.snapshot.phase == .finishing ? "Finishing your thought…" : model.snapshot.committedText.isEmpty ? "Go on. Your thought goes here." : model.snapshot.committedText)
+                    .font(.system(size: 15)).lineSpacing(3).lineLimit(4).frame(maxWidth: .infinity, alignment: .leading)
+                HStack {
+                    Text("\(model.shortcut) to finish").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                    Spacer()
+                    if model.snapshot.phase == .listening {
+                        Button("Finish", action: actions.talk).buttonStyle(.plain)
+                        Button("Esc · Cancel", action: actions.cancel).buttonStyle(.plain)
+                    }
+                }.font(.system(size: 12))
+            }
+        }
+        .padding(20).frame(width: 440).foregroundStyle(Grafico.ink)
+        .background(Grafico.card, in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Grafico.ink, lineWidth: 1.5))
+        .padding(4).preferredColorScheme(.light)
+    }
+    private var label: String {
+        switch model.snapshot.phase {
+        case .listening: "Listening"
+        case .starting: "Starting"
+        case .finishing: "Finishing"
+        case .recovery: "Your words are kept"
+        case .failed: "A little help"
+        default: "Ready"
+        }
+    }
+}
+
+@MainActor
+final class OverlayPanel: NSPanel {
+    let model = OverlayModel()
+    private var host: NSHostingController<DictadoOverlay>?
     init() {
-        super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 72),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
+        super.init(contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         isFloatingPanel = true
         level = .floating
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -19,45 +69,25 @@ final class OverlayPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        ignoresMouseEvents = true
-
-        let box = NSVisualEffectView(frame: contentView?.bounds ?? .zero)
-        box.autoresizingMask = [.width, .height]
-        box.material = .hudWindow
-        box.state = .active
-        box.wantsLayer = true
-        box.layer?.cornerRadius = 12
-        contentView = box
-
-        meter.wantsLayer = true
-        meter.layer?.backgroundColor = NSColor.controlAccentColor.cgColor
-        meter.layer?.cornerRadius = 2
-        box.addSubview(meter)
-
-        textField.font = .systemFont(ofSize: 14)
-        textField.textColor = .labelColor
-        textField.lineBreakMode = .byTruncatingHead
-        textField.maximumNumberOfLines = 2
-        box.addSubview(textField)
+        isReleasedWhenClosed = false
+        becomesKeyOnlyIfNeeded = true
     }
-
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
+    func configure(actions: PlateActions) {
+        let controller = NSHostingController(rootView: DictadoOverlay(model: model, actions: actions))
+        host = controller
+        contentViewController = controller
+    }
     func apply(_ snapshot: OverlaySnapshot) {
-        if !snapshot.isVisible {
-            orderOut(nil)
-            return
-        }
-        let message = snapshot.message ?? snapshot.committedText
-        textField.stringValue = message.isEmpty ? "Listening" : message
-        let width = max(8, CGFloat(snapshot.rms) * 200)
-        let bounds = contentView?.bounds ?? NSRect(x: 0, y: 0, width: 420, height: 72)
-        meter.frame = NSRect(x: 16, y: 12, width: width, height: 6)
-        textField.frame = NSRect(x: 16, y: 24, width: bounds.width - 32, height: 36)
-        if !isVisible {
-            if let screen = NSScreen.main {
-                let frame = screen.visibleFrame
-                setFrameOrigin(NSPoint(x: frame.midX - 210, y: frame.minY + 80))
-            }
-            orderFrontRegardless()
-        }
+        if model.snapshot != snapshot { model.snapshot = snapshot }
+        guard snapshot.isVisible else { orderOut(nil); return }
+        let height: CGFloat = snapshot.phase == .recovery ? 405 : snapshot.phase == .failed ? 250 : 205
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main else { return }
+        let visible = screen.visibleFrame
+        let size = CGSize(width: 448, height: height)
+        let rect = CGRect(x: visible.midX - size.width / 2, y: visible.minY + 48, width: size.width, height: size.height)
+        if frame != rect { setFrame(rect, display: true) }
+        if !isVisible { orderFrontRegardless() }
     }
 }

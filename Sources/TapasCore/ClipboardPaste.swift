@@ -18,7 +18,7 @@ public struct ClipboardPaster: TextPaster {
     public func paste(_ text: String) async throws {
         let previous = board.string
         board.string = text
+        defer { board.string = previous }
         try await typer.commandV()
-        board.string = previous
     }
 }
