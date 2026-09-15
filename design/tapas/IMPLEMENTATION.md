@@ -6,8 +6,8 @@ The brand and visual direction remain in [README.md](README.md); [BEHAVIORS.md](
 
 - **First taste:** Gráfico setup window, microphone access, optional Accessibility, voice-model preparation and retry, real dictation practice, completion. Setup can be closed and resumed. Models download during setup; a completed installation prepares cached models on launch.
 - **Your plate:** pintxo menu-bar icon, Dictado start/finish, persistent status, Tools / Recent / Preferences, file opening and Finder reveal. Acta is marked Next; Captura and Consulta are Later. Future tools have no active capture behavior.
-- **Dictado:** non-activating live-word overlay, finishing state, Escape cancellation, optional live overlay, permission and transcription errors, retained results with copy/export and separate paste/save retries.
-- **Preferences:** Control–Option, Right Command or a recorded custom shortcut; live overlay; history saving. Preferences survive relaunch. Permission state reflects macOS rather than a simulated toggle.
+- **Dictado:** non-activating recording indicator, optional live words, finishing state, Escape cancellation, permission and transcription errors, retained results with copy/export and separate paste/save retries. Turning off Show live words keeps a compact Starting / Listening / Finishing panel with recording controls; it hides only the transcript preview. Setup and Your plate show their own recording status while open. Recovery still displays retained words regardless of this preference.
+- **Preferences:** Control–Option, Right Command or a recorded custom shortcut; live transcript preview; history saving. Preferences survive relaunch. Permission state reflects macOS rather than a simulated toggle.
 - **Identity:** shared colors and pintxo drawing in `Grafico.swift`, reduced-motion support, generated app icon, main tagline “Small tools. Good company.”
 
 ## Accessibility setup recovery
@@ -76,7 +76,7 @@ Before treating this as a daily-driver release, verify on the Mac with its real 
 
 1. Complete setup and dictate a sentence into the practice field.
 2. Dictate into Notes and another everyday app, including a field that needs the clipboard fallback.
-3. Confirm the global shortcut and Escape cancellation, both with the overlay enabled and disabled.
+3. Confirm the global shortcut and Escape cancellation with Show live words enabled and disabled. With it off, the compact recording indicator and Finish / Cancel controls must remain visible, while the transcript preview stays hidden.
 4. Check that changing the destination during a take leads to text recovery; test copy and retry paste.
 5. Dictate consecutive EN/ES/RU takes, inspect the redacted files, and relaunch to verify preferences and recent history.
 

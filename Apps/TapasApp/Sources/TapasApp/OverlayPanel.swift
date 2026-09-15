@@ -6,6 +6,7 @@ import TapasCore
 final class OverlayModel {
     var snapshot = OverlaySnapshot()
     var shortcut = Hotkey.standard.label
+    var showLiveWords = true
     var notice: String?
 }
 
@@ -27,10 +28,12 @@ struct DictadoOverlay: View {
                 ScrollView { ResultView(snapshot: model.snapshot, actions: actions) }.frame(maxHeight: 290)
                 if model.snapshot.committedText.isEmpty { Button("Open setup", action: actions.setup).buttonStyle(.plain) }
             } else {
-                Text(model.snapshot.phase == .finishing ? "Finishing your thought…" : model.snapshot.committedText.isEmpty ? "Go on. Your thought goes here." : model.snapshot.committedText)
-                    .font(.system(size: 15)).lineSpacing(3).lineLimit(4).frame(maxWidth: .infinity, alignment: .leading)
+                if model.showLiveWords {
+                    Text(model.snapshot.phase == .starting ? "Getting ready to listen…" : model.snapshot.phase == .finishing ? "Finishing your thought…" : model.snapshot.committedText.isEmpty ? "Go on. Your thought goes here." : model.snapshot.committedText)
+                        .font(.system(size: 15)).lineSpacing(3).lineLimit(4).frame(maxWidth: .infinity, alignment: .leading)
+                }
                 HStack {
-                    Text("\(model.shortcut) to finish").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                    Text(model.snapshot.phase == .starting ? "One moment…" : model.snapshot.phase == .finishing ? "Turning your voice into words…" : "\(model.shortcut) to finish").font(.system(size: 11)).foregroundStyle(Grafico.muted)
                     Spacer()
                     if model.snapshot.phase == .listening {
                         Button("Finish", action: actions.talk).buttonStyle(.plain)
@@ -82,7 +85,7 @@ final class OverlayPanel: NSPanel {
     func apply(_ snapshot: OverlaySnapshot) {
         if model.snapshot != snapshot { model.snapshot = snapshot }
         guard snapshot.isVisible else { orderOut(nil); return }
-        let height: CGFloat = snapshot.phase == .recovery ? 405 : snapshot.phase == .failed ? 250 : 205
+        let height: CGFloat = snapshot.phase == .recovery ? 405 : snapshot.phase == .failed ? 250 : model.showLiveWords ? 205 : 140
         guard let screen = NSScreen.screens.first(where: { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) }) ?? NSScreen.main else { return }
         let visible = screen.visibleFrame
         let size = CGSize(width: 448, height: height)

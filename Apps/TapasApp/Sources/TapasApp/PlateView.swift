@@ -175,7 +175,7 @@ struct PlateView: View {
             }
             if model.recordingShortcut { NoticeBox(text: "Press your new shortcut. Escape keeps the current one.") }
             Toggle("Show live words", isOn: $model.settings.overlayEnabled).onChange(of: model.settings.overlayEnabled) { _, _ in actions.preferencesChanged() }
-            Text("A small overlay while you speak. Errors remain visible even when this is off.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            Text("Preview your words as you speak. Recording status and controls always stay visible.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             Toggle("Save a history", isOn: $model.settings.historyEnabled).onChange(of: model.settings.historyEnabled) { _, _ in actions.preferencesChanged() }
             Text("Keep a redacted Markdown copy after each take. Changing this applies to your next take.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             Divider()

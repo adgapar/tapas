@@ -209,7 +209,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 menu?.update(snap)
                 var visible = snap
                 if setup?.window?.isVisible == true || menu?.isShown == true { visible.isVisible = false }
-                else if !model.settings.overlayEnabled && snap.phase != .recovery && snap.phase != .failed { visible.isVisible = false }
+                overlay.model.showLiveWords = model.settings.overlayEnabled
                 overlay.apply(visible)
                 if snap.historyURL != lastHistoryURL {
                     lastHistoryURL = snap.historyURL

@@ -64,6 +64,11 @@ enum DesignRendering {
         let overlay = OverlayModel()
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.1, phase: .listening)
         try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 205), to: directory.appendingPathComponent("dictado-listening.png"))
+        overlay.showLiveWords = false
+        for phase in [DictationPhase.starting, .listening, .finishing] {
+            overlay.snapshot.phase = phase
+            try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 140), to: directory.appendingPathComponent("dictado-compact-\(phase.rawValue).png"))
+        }
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "Nos vemos en la terraza a las seis.", message: "Paste wasn’t available. Copy your words or retry in the original app.", phase: .recovery, pasteFailed: true)
         try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 405), to: directory.appendingPathComponent("dictado-recovery.png"))
     }
