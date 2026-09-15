@@ -4,7 +4,7 @@
 
 Tapas’s main brand line pairs the usefulness of small AI tools with the warmth of sharing tapas. Use this wording consistently; uppercase and a line break between the sentences are welcome in visual layouts.
 
-The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
+The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. The four ingredients belong to the brand, not to individual products; their count stays fixed as the catalog grows. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
 
 The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta remains a concept for its next iteration.
 
@@ -18,9 +18,9 @@ python3 -m http.server 8765 --directory design/tapas
 
 Open [the prototype](http://localhost:8765/). No build step, dependencies or external assets are needed.
 
-Explore [Dictado form and motion](dictado-motion.html): **El borde is the selected Dictado direction**, a 124 × 28 px top-edge signal. Its four pintxo ingredients rotate and spread into voice bars during capture, then gather back into the mark. The enlarged motion view shows the same four elements transforming. The floating El pintxo remains an **Acta companion exploration**, not an implemented meeting interface. Live words are optional and separate from recording status. These are HTML concepts; native presentation has not changed.
+Explore [Dictado form and motion](dictado-motion.html): **El borde is the selected Dictado direction**, a 124 × 28 px top-edge signal. Its four pintxo ingredients rotate and spread into voice bars during capture, then gather back into the mark. The enlarged motion view shows the same four elements transforming. The floating El pintxo remains an **Acta companion exploration**, not an implemented meeting interface. Idle is hidden; starting a take reveals the signal immediately. A camera-notch toggle previews its position below the camera and menu bar. Live words are optional and separate from recording status. These are HTML concepts; native presentation has not changed.
 
-Use the journey rail to explore onboarding, Dictado, Acta, Your plate, Captura and Consulta. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
+Use the journey rail to explore onboarding, Dictado, Acta and Your plate. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
 
 ## Selected visual language
 
@@ -47,4 +47,4 @@ The pintxo assembles during setup, transforms into four voice bars arranged hori
 
 In the browser prototype, speech, permissions, model preparation, app audio, capture and file search are simulated. Sample data and preferences stay in memory until reload. Explicit export buttons download sample Markdown; copy buttons use the browser clipboard. Nothing records audio or reads your folders.
 
-Dictado is the first product. Acta is next; Captura and Consulta are later concepts, labeled accordingly throughout the preview.
+The first public release includes Dictado and Acta. Acta is currently a design preview. Other ideas are kept out of the product catalog; see the [product and identity strategy](../../PRODUCT_STRATEGY.md).

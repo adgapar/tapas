@@ -8,9 +8,9 @@ Dictado now has a native implementation of this direction. [IMPLEMENTATION.md](I
 
 “Small tools. Good company.” is the main brand line. It introduces the collection with warmth; individual tool screens use concrete copy to explain what happens next.
 
-Tapas is a collection of small tools that produce useful results where the user already works. The pintxo joins them into one identity. Each tool has a simple glyph and a recognizable ingredient color: Dictado saffron, Acta cobalt, Captura paprika, Consulta olive.
+Tapas is a collection of small tools that produce useful results where the user already works. The pintxo joins them into one identity. The four ingredients are a fixed brand mark, not a product count. Tools have distinct glyphs and names; accents can be reused. Dictado and Acta share the full four-color identity. A fifth tool adds a catalog entry without changing the logo or waveform. See [product and identity strategy](../../PRODUCT_STRATEGY.md).
 
-The menu-bar home, “Your plate,” contains Tools, Recent and Preferences. Dictado is the first available tool. Acta is marked Next; Captura and Consulta are marked Later. In this design preview their cards open interactive concepts. Native release builds should distinguish shipped tools from previews just as clearly.
+The menu-bar home, “Your plate,” contains Tools, Recent and Preferences. The first public release includes Dictado and Acta. The development preview identifies Acta as unfinished; release builds must have both tools working. Uncommitted ideas have no visible cards or promised dates.
 
 The sample desktop has a notch status and an alternate notchless presentation. Clicking the status opens Your plate. A running Acta session also has a compact companion with an Open action.
 
@@ -25,7 +25,7 @@ The sample desktop has a notch status and an alternate notchless presentation. C
 | Try it | Choose shortcut, start and finish a sample take | Show words arriving; allow cancellation. Continue becomes available after a completed thought. |
 | Ready | Try Dictado or open Your plate | Reinforce the shortcut and the Markdown destination. |
 
-The pintxo assembles as preparation advances. Permission requests arrive with the action they enable. Onboarding never asks for Acta app audio or Captura screen access.
+The pintxo assembles as preparation advances. Permission requests arrive with the action they enable. Dictado onboarding never asks for Acta app audio.
 
 The preview supports Control–Option and Right Command shortcuts while its page is focused. Buttons provide the same actions. Native shortcut registration and Accessibility requirements must be handled by the app; browser keyboard behavior is only illustrative.
 
@@ -52,9 +52,9 @@ The overlay preference controls live words; the status remains visible when the 
 
 The waveform is the pintxo itself. The same four shapes keep their order and colors—saffron, cobalt, paprika, olive—as they spread along a horizontal axis and rotate into vertical voice bars. The pick recedes during capture. Opening takes approximately 550 ms; voice movement begins after the transformation. When capture stops, the shapes gather back onto the pick while Finishing remains explicit. Delivery briefly holds Listo, then settles. The study includes a 3× enlarged view of this same transformation, synchronized with the sample take. The top-edge recording control never grows during the animation.
 
-Clicking the signal starts or finishes a take; hover or keyboard focus reveals Finish and Cancel. Escape cancels. Live words default off in the study and appear in a separate two-line caption when enabled. The caption follows recent words without moving or resizing the recording control; the complete text remains available for delivery. Recovery stays until resolved and may use a larger, readable surface. The study keeps an idle signal visible for comparison; final native idle visibility remains to be decided.
+Idle has no Dictado popup. The shortcut or Start a take begins microphone capture immediately; there is no Ready step to confirm. Show Starting only while the native microphone is opening, then Listening once capture is active. The animation must never delay audio capture. Clicking the active signal finishes a take; hover or keyboard focus reveals Finish and Cancel. Escape cancels. Live words default off in the study and appear in a separate two-line caption when enabled. The caption follows recent words without moving or resizing the recording control; the complete text remains available for delivery. Recovery stays until resolved and may use a larger, readable surface. After successful delivery, show Listo for 1.6 seconds and hide the popup. Cancellation hides it immediately. The enlarged illustration remains visible solely to explain the motion.
 
-Quiet motion and the OS reduced-motion preference switch directly between static forms and preserve labels. Production movement must follow the actual audio level; the HTML uses scripted animation. The native signal should stay on the display where the take began, preserve destination focus, and clear menu-bar controls. Do not move it in response to individual words.
+Quiet motion and the OS reduced-motion preference switch directly between static forms and preserve labels. Production movement must follow the actual audio level; the HTML uses scripted animation. The native signal should stay on the display where the take began and preserve destination focus. Place El borde below both the menu bar and camera cutout with a small gap. On MacBooks, use the display’s actual [safe-area insets](https://developer.apple.com/documentation/appkit/nsscreen/safeareainsets) and visible frame rather than fixed notch dimensions; do not cover the camera housing or adjacent menu-bar controls. Recalculate for display configuration and menu-bar changes, including full screen. The HTML camera-notch toggle is a geometry simulation, not hardware detection. Do not move it in response to individual words.
 
 ### Shared family: the floating pintxo for Acta
 
@@ -91,18 +91,6 @@ Recent filters the sample library by title, content and tool. Open shows readabl
 
 Preferences expose the dictation shortcut, live-word overlay, history saving and simulated paste access. Native Accessibility access belongs to macOS; the prototype toggle exists to explore both states. Preferences and history reset on reload. Clipboard failures direct the user to export.
 
-## Captura: later concept
-
-The journey starts from a suggested spoken request, then confirms the selected window before capture. Screen access is requested here. The proposed output pairs an image with a readable text sidecar so both people and tools can find and reuse the moment.
-
-The preview simulates capture, permission denial/recovery, a completion receipt and opening the sidecar. Export contains only a sample Markdown note. No PNG is generated and no real OCR or screen capture occurs. The native flow still needs the actual window picker, capture pipeline and sidecar extraction.
-
-## Consulta: later concept
-
-The user chooses folders, enters remembered words, reviews paths and snippets, and opens a match. Empty queries and zero selected folders prompt a correction. No matches suggest changing terms or scope.
-
-The prototype searches a few fictional text files by all entered words within title/content and selected scope. It does not access the disk or Spotlight. The native concept should perform scoped name/content search and show understandable evidence for each result.
-
 ## Motion, access and implementation boundaries
 
 - Ready is quiet. Listening, working and completion have distinct, brief shape behaviors.
@@ -114,4 +102,6 @@ The prototype searches a few fictional text files by all entered words within ti
 
 ## Validation
 
-The connected browser flows were exercised in isolated Chrome: complete onboarding with denial and download retry; Dictado fallback, silence and cancellation; Acta persistence, pause/resume, source interruption, failed save, export and retry; history filtering and preferences; Captura sidecar; Consulta matches and empty results. All six journeys were checked at 390 px for horizontal overflow and clipped controls. The notchless toggle and browser runtime errors were also checked. Native Swift behavior is outside this prototype validation.
+The maintained browser journeys are onboarding, Dictado, Acta and Your plate. Capture and file-search experiments were removed from the product preview; their ideas remain in the private backlog. Native implementation and live-device verification are tracked separately in IMPLEMENTATION.md.
+
+Current browser checks cover the two-tool catalog, four maintained journeys, history filtering, preferences, Dictado start/cancel, Acta pause/background/save, narrow layouts, and safe fallback from retired links. The focused Dictado study also checks hidden idle, immediate listening, delivery/cancel dismissal, and menu/camera clearance on notched and regular displays.

@@ -109,9 +109,7 @@ struct PlateView: View {
                 Button("Shortcut & paste settings", action: actions.setup).buttonStyle(.plain).font(.system(size: 11))
             }
             Divider()
-            future("Acta", "Be there. Keep the conversation.", "NEXT", "text.bubble", Grafico.cobalt)
-            future("Captura", "A moment, with a little context.", "LATER", "viewfinder", Grafico.paprika)
-            future("Consulta", "The file you were thinking of.", "LATER", "magnifyingglass", Grafico.olive)
+            future("Acta", "Be there. Keep the conversation.", "IN DEV", "text.bubble", Grafico.cobalt)
         }
     }
 
