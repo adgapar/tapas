@@ -109,6 +109,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let trusted = AXIsProcessTrusted()
             return (trusted, self?.hotkey.tapRunning == true)
         }
+        controller.retryAccessibility = { [weak self] in
+            let trusted = AXIsProcessTrusted()
+            if trusted { self?.hotkey.noteTrustMayHaveChanged() }
+            return (trusted, self?.hotkey.tapRunning == true)
+        }
         controller.downloadModels = { [weak self] in try await self?.prepareModels() }
         controller.downloadFraction = { [catalog] in await catalog.downloadFraction }
         controller.modelsReady = { [weak self] in self?.session != nil }

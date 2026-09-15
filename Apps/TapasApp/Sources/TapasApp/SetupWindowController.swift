@@ -9,6 +9,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     var allowMicrophone: (() async -> Bool)?
     var microphoneGranted: (() async -> Bool)?
     var openAccessibility: (() -> Void)?
+    var retryAccessibility: (() -> (trusted: Bool, tapStarted: Bool))?
     var pollAccessibility: (() -> (trusted: Bool, tapStarted: Bool))?
     var downloadModels: (() async throws -> Void)?
     var downloadFraction: (() async -> Double)?
@@ -35,7 +36,9 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onSkip: { [weak self] in self?.window?.close() },
             onPractice: { [weak self] in await self?.handleTalk() },
             onCancel: { [weak self] in self?.onCancel?() },
-            onHotkey: { [weak self] value in self?.onHotkey?(value) }
+            onHotkey: { [weak self] value in self?.onHotkey?(value) },
+            onRecheckAccessibility: { [weak self] in self?.recheckAccessibility() },
+            onRevealApplication: { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
         ))
         window.appearance = NSAppearance(named: .aqua)
         window.center()
@@ -53,6 +56,19 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
                 await self?.refresh()
                 try? await Task.sleep(for: .milliseconds(150))
             }
+        }
+    }
+
+    func windowDidBecomeKey(_ notification: Notification) {
+        recheckAccessibility()
+    }
+
+    private func recheckAccessibility() {
+        guard model.flow.phase == .accessibility else { return }
+        model.accessibilityChecked = true
+        if let status = retryAccessibility?() ?? pollAccessibility?() {
+            model.flow.accessibilityTrusted = status.trusted
+            model.flow.tapStarted = status.tapStarted
         }
     }
 
@@ -89,6 +105,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
                 model.flow.modelError = "Microphone access is off. Enable Tapas in Privacy & Security → Microphone, then return here."
             }
         case .accessibility:
+            recheckAccessibility()
+            model.flow.modelError = nil
             model.flow.advance()
         case .kitchen:
             if model.flow.modelsReady { model.flow.advance() }

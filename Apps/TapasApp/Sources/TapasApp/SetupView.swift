@@ -9,6 +9,7 @@ final class SetupModel {
     var practiceText = ""
     var phase: DictationPhase = .idle
     var completedPractice = false
+    var accessibilityChecked = false
     init(flow: SetupFlow) { self.flow = flow }
 }
 
@@ -20,6 +21,8 @@ struct SetupView: View {
     var onPractice: () async -> Void
     var onCancel: () -> Void
     var onHotkey: (Hotkey) -> Void
+    var onRecheckAccessibility: () -> Void = {}
+    var onRevealApplication: () -> Void = {}
 
     private var step: Int {
         switch model.flow.phase {
@@ -72,7 +75,8 @@ struct SetupView: View {
                 }
                 .frame(width: 205).frame(maxHeight: .infinity).background(Grafico.saffron.opacity(0.86))
                 Rectangle().fill(Grafico.ink).frame(width: 1)
-                ScrollView {
+                VStack(spacing: 0) {
+                    ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         Eyebrow(text: step == 0 ? "Your first taste of Tapas" : "0\(step) / \(model.flow.phase == .finished ? "Ready with gusto" : "A first taste")")
                         VStack(alignment: .leading, spacing: 0) {
@@ -82,9 +86,13 @@ struct SetupView: View {
                         Text(description).font(.system(size: 13)).foregroundStyle(Grafico.muted).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
                         content
                         if let error = model.flow.modelError { NoticeBox(text: error, error: true) }
-                        actions
+                        if model.flow.phase != .accessibility { actions }
                     }
                     .padding(30)
+                    }
+                    if model.flow.phase == .accessibility {
+                        accessibilityActions.padding(.horizontal, 30).padding(.bottom, 24)
+                    }
                 }
             }
             HStack {
@@ -112,7 +120,11 @@ struct SetupView: View {
         case .microphone:
             NoticeBox(text: model.flow.microphoneGranted ? "✓ Microphone is allowed." : "Used during your takes. Audio stays on this Mac.")
         case .accessibility:
-            NoticeBox(text: model.flow.accessibilityTrusted ? (model.flow.tapStarted ? "✓ Shortcut and paste access are ready." : "Access is allowed. Reopen Tapas if the global shortcut is still unavailable.") : "System Settings → Privacy & Security → Accessibility → Tapas")
+            NoticeBox(text: model.flow.accessibilityTrusted
+                ? (model.flow.tapStarted ? "✓ Shortcut and paste access are ready." : "✓ Paste access is allowed. The global shortcut hasn’t started yet; you can continue with the on-screen buttons.")
+                : model.accessibilityChecked
+                    ? "macOS still hasn’t confirmed access. If Tapas is already enabled, turn it off and on. If that doesn’t help, remove the old entry and add this copy of Tapas again."
+                    : "Enable Tapas in System Settings → Privacy & Security → Accessibility, then return here. Already enabled? Choose Check again.")
         case .kitchen:
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
@@ -146,15 +158,33 @@ struct SetupView: View {
         }
     }
 
-    @ViewBuilder private var actions: some View {
-        if model.flow.phase == .accessibility && !model.flow.accessibilityTrusted {
-            Button("Enable in Settings ↗", action: onSecondary).buttonStyle(GraficoButtonStyle(blue: true))
-            Button("Later. I’ll copy my words.") { Task { await onPrimary() } }.buttonStyle(.plain).font(.system(size: 12))
-        } else {
-            Button(primaryTitle) { Task { await onPrimary() } }
-                .buttonStyle(GraficoButtonStyle(blue: model.flow.phase == .finished))
-                .disabled(model.busy || model.downloading || (model.flow.phase == .tryIt && (!model.completedPractice || model.phase.isActive)))
+    private var accessibilityActions: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Button { Task { await onPrimary() } } label: {
+                HStack {
+                    Text(model.flow.accessibilityTrusted ? "Continue →" : "Continue with copy →")
+                    Spacer()
+                }
+            }.buttonStyle(GraficoButtonStyle(blue: model.flow.accessibilityTrusted))
+            HStack(spacing: 18) {
+                Button("Open Settings ↗", action: onSecondary)
+                Button("Check again", action: onRecheckAccessibility)
+            }.buttonStyle(.plain).font(.system(size: 12))
+            if !model.flow.accessibilityTrusted {
+                Text("You can finish setup now. Until access is confirmed, start with the on-screen button and copy your words.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted).fixedSize(horizontal: false, vertical: true)
+                if model.accessibilityChecked {
+                    Button("Show this Tapas in Finder ↗", action: onRevealApplication)
+                        .buttonStyle(.plain).font(.system(size: 11))
+                }
+            }
         }
+    }
+
+    @ViewBuilder private var actions: some View {
+        Button(primaryTitle) { Task { await onPrimary() } }
+            .buttonStyle(GraficoButtonStyle(blue: model.flow.phase == .finished))
+            .disabled(model.busy || model.downloading || (model.flow.phase == .tryIt && (!model.completedPractice || model.phase.isActive)))
         if model.flow.phase != .finished {
             Button("Set up later", action: onSkip).buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Grafico.muted)
         }

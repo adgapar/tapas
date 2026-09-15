@@ -10,6 +10,12 @@ The brand and visual direction remain in [README.md](README.md); [BEHAVIORS.md](
 - **Preferences:** Control–Option, Right Command or a recorded custom shortcut; live overlay; history saving. Preferences survive relaunch. Permission state reflects macOS rather than a simulated toggle.
 - **Identity:** shared colors and pintxo drawing in `Grafico.swift`, reduced-motion support, generated app icon, main tagline “Small tools. Good company.”
 
+## Accessibility setup recovery
+
+The Accessibility step always keeps a Continue action visible. If macOS has not confirmed permission, “Continue with copy” advances setup without enabling automatic paste or the global shortcut. The step rechecks permission when its window becomes key and through Check again; a successful explicit check also retries global shortcut registration.
+
+Open Settings asks macOS to register the running app's permission request before opening the Accessibility pane. If an enabled entry is not recognized, the UI explains how to toggle it or replace the old entry, and Show this Tapas in Finder identifies the current app bundle. Locally rebuilt, ad-hoc-signed apps may need permission to be granted again; an enabled Settings entry alone is not treated as proof of access.
+
 ## Dictation and files
 
 A take uses the microphone and local Voz recognition, with Ear language detection and English filler removal. Orden currently always selects Dictado. Acta and the other future tools are not routed from speech yet.
