@@ -18,7 +18,7 @@ python3 -m http.server 8765 --directory design/tapas
 
 Open [the prototype](http://localhost:8765/). No build step, dependencies or external assets are needed.
 
-Explore [Dictado form and motion](dictado-motion.html): three smaller Gráfico signals—La miga (188 × 40 px pill), El pintxo (82 × 78 px floating mark), and El borde (124 × 28 px edge tab). El pintxo is the new leading exploration. Click the signal to start or finish; hover or focus for secondary controls. Optional live words appear in a separate two-line caption. Delivery, recovery and reduced motion are interactive. These are HTML concepts; native presentation has not changed.
+Explore [Dictado form and motion](dictado-motion.html): **El borde is the selected Dictado direction**, a 124 × 28 px top-edge signal. Its four pintxo ingredients rotate and spread into voice bars during capture, then gather back into the mark. The enlarged motion view shows the same four elements transforming. The floating El pintxo remains an **Acta companion exploration**, not an implemented meeting interface. Live words are optional and separate from recording status. These are HTML concepts; native presentation has not changed.
 
 Use the journey rail to explore onboarding, Dictado, Acta, Your plate, Captura and Consulta. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
 
@@ -33,7 +33,7 @@ Use the journey rail to explore onboarding, Dictado, Acta, Your plate, Captura a
 | Typography | Direct sans-serif headings with occasional italic serif accents |
 | Personality | Brief, purposeful motion; warm copy with a little Spanish flavor |
 
-The pintxo assembles during setup, separates while listening, shifts while working and settles when output arrives. Status also has a text label, so motion and color are never the only signal. Reduced-motion preferences are respected.
+The pintxo assembles during setup, transforms into four voice bars arranged horizontally for Dictado, gathers while working and settles when output arrives. Its saffron, cobalt, paprika and olive ingredients keep their identities through every transformation. Status also has a text label, so motion and color are never the only signal. Reduced-motion preferences are respected.
 
 ## Files
 

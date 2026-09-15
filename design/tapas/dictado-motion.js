@@ -3,16 +3,18 @@
   const sentence = 'Leave a little room for the good ideas. We can make something useful, and make it feel good too.';
   const words = sentence.split(' ');
   const descriptions = {
-    miga: ['La miga.', 'A small ink pill: voice level, Listening, and a stop control. Familiar, but much lighter.', 'Bottom center, above the Dock. Click the pill to start or finish.', 'Five colored strokes catch the rhythm. The pill keeps the same footprint from listening to delivery.', '188 × 40 px · one compact line'],
-    pintxo: ['El pintxo.', 'Four ingredients, floating on their own. A tiny status label keeps it clear. Tap the pintxo to finish.', 'The pintxo is the control. Click it to start or finish; hover for more.', 'The ingredients do the listening. A little movement, a clear label, then a satisfied settle.', '82 × 78 px · no surrounding panel'],
-    borde: ['El borde.', 'A sliver of ink tucked under the menu bar. Colored ingredients and one word tell you what is happening.', 'Top center. Always in the same place; the caption unfolds below it.', 'A tiny bookmark for your voice. It slips down a few pixels, then sits quietly at the edge.', '124 × 28 px · tucked into the edge']
+    pintxo: ['El pintxo.', 'A floating companion could suit Acta’s longer conversations. This is a shape exploration; the controls here still play a sample Dictado take.', 'Companion exploration for Acta. A clear presence, with room to grow into meeting status.', 'For Acta, keep the ingredients together as a companion. Reserve the compact voice transformation for short Dictado takes.', '82 × 78 px · possible Acta companion'],
+    borde: ['El borde.', 'A tiny edge signal for a quick thought. The same four ingredients unfold into voice bars, then return to the pintxo.', 'Dictado stays at the top edge. Its four ingredients turn into the voice signal.', 'Saffron, cobalt, paprika, olive. Four ingredients at rest; the same four ingredients in motion.', '124 × 28 px · selected for Dictado']
   };
-  let state = 'idle', placement = 'pintxo', count = 0, started = 0, frame = null, generation = 0, autoFinish = null, settleTimer = null, inserted = false;
+  let state = 'idle', placement = 'borde', count = 0, started = 0, frame = null, generation = 0, autoFinish = null, settleTimer = null, inserted = false;
   const labels = {idle:'Ready',listening:'Listening',finishing:'Finishing',delivered:'Listo ✓',recovery:'Words kept',empty:'Try again',cancelled:'Cancelled'};
   function clearTimers() { cancelAnimationFrame(frame); clearTimeout(autoFinish); clearTimeout(settleTimer); generation++; }
   function enter() { const panel = $('dictado'); panel.classList.remove('reenter'); void panel.offsetWidth; panel.classList.add('reenter'); }
   function render() {
     $('desktop').dataset.state = state;
+    $('morph-demo').dataset.state = state;
+    $('morph-label').textContent = state === 'listening' ? 'The same pieces, listening' : state === 'finishing' ? 'Gathering back onto the pick' : state === 'delivered' ? 'Listo. Back together.' : 'Pintxo, at rest';
+    $('replay-morph').disabled = state === 'recovery';
     $('status').textContent = labels[state];
     $('recording-token').disabled = ['finishing','recovery'].includes(state);
     $('recording-token').setAttribute('aria-label', state === 'listening' ? 'Finish take' : state === 'finishing' ? 'Finishing your words' : state === 'recovery' ? 'Your words are kept below' : 'Start a take');
@@ -61,6 +63,7 @@
   $('toggle').addEventListener('click',()=>state==='listening'?finish():start());
   $('finish').addEventListener('click',finish); $('cancel').addEventListener('click',cancel); $('again').addEventListener('click',()=>start()); $('retry').addEventListener('click',()=>{if(state==='recovery')land();});
   $('replay').addEventListener('click',()=>{if(state==='recovery')return;clearTimers();state='idle';start(true);});
+  $('replay-morph').addEventListener('click',()=>{if(state==='recovery')return;clearTimers();state='idle';start(true);});
   $('live-words').addEventListener('change',render);
   const reduced=matchMedia('(prefers-reduced-motion: reduce)'); $('quiet-motion').checked=reduced.matches;
   $('quiet-motion').addEventListener('change',()=>document.body.classList.toggle('quiet-motion',$('quiet-motion').checked));
