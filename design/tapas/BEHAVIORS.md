@@ -87,6 +87,17 @@ The companion and notch communicate ongoing capture. Collapsing a window never i
 
 The intended output root is `~/Documents/tapas/`, with tool-specific folders such as `dictado/` and `acta/`. Plain files are usable by the person and their other tools.
 
+**Your files are the interface.** Saving creates a readable file the person can
+open in an editor, use from a script, or give to an agent harness they build
+themselves. File access does not depend on a Tapas account or MCP server. Future
+integrations should offer convenience while preserving this direct path.
+
+The product demonstration should follow capture → saved Markdown → a user-chosen
+script or agent operating on the file. Separate the agent's actions from Tapas's
+capture behavior, and label simulated or future steps. The current native
+preview saves history only when enabled and redacts that saved copy; the
+decision about preserving a full transcript by default is still pending.
+
 Recent filters the sample library by title, content and tool. Open shows readable content, its intended destination, Copy text and Export .md. Export generates a real browser download labeled as prototype sample content. The preview does not write into the displayed native folder.
 
 Preferences expose the dictation shortcut, live-word overlay, history saving and simulated paste access. Native Accessibility access belongs to macOS; the prototype toggle exists to explore both states. Preferences and history reset on reload. Clipboard failures direct the user to export.

@@ -2,17 +2,25 @@
 
 Small tools. Good company.
 
-## The user's files are the product
+**Capture on your Mac. Keep your files. Build whatever comes next.**
+
+## Your files are the interface
 
 Tapas captures useful material into local, human-readable files that belong to
 the user. The app is a convenient way to capture and browse that material; it
 must not become the only way to access it.
 
-Transcripts should be legible to a person, a text editor, and any coding agent.
-Point Claude Code, Codex, Cursor, or another tool at the folder and ask for the
-analysis you need. Useful timestamps and language metadata belong beside the
-text in an open format. Reading the data must not require a Tapas service, API,
-special export operation, or proprietary database.
+Transcripts should be legible to a person, a text editor, a script, and any coding
+agent. People can use an existing agent, build their own harness, or assemble a
+workflow Tapas has never anticipated. Useful timestamps and language metadata
+belong beside the text in an open format. Reading the data must not require a
+Tapas service, API, special export operation, or proprietary database.
+
+Files come first; integrations are optional conveniences. An MCP server may
+eventually make access easier, but it must never be required to read or use a
+saved transcript. A person should be able to find, copy, move and work with the
+files independently of the app. Agents and scripts should have the same direct
+path, subject to the access the user grants them.
 
 The user decides which agents can access the files and where subsequent analysis
 runs. Local capture does not imply that a separately chosen cloud agent runs
@@ -21,6 +29,9 @@ locally. Tapas should never silently send the user's transcripts to one.
 Future summaries, meeting insights, skills and MCP integrations are conveniences
 built on those files. Derived results should preserve the source transcript;
 they should not replace it or trap it inside the app.
+
+[Product messaging](design/tapas/MESSAGING.md) records the approved wording and
+how to demonstrate this principle without promising unimplemented behavior.
 
 ## First release: two complete tools
 

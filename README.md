@@ -4,16 +4,23 @@
 
 A plate of small, on-device AI tools for Mac. The first release will include Dictado and Acta; development starts with Dictado.
 
-Capture once. Keep readable files. Use any agent.
+## Capture on your Mac. Keep your files. Build whatever comes next.
 
-Your transcripts belong to you, in plain Markdown under `~/Documents/tapas/`.
-Read them yourself or point Claude Code, Codex, Cursor, or another coding agent at
-the folder for analysis. No Tapas-specific API, export step, proprietary database,
-or subscription is needed to read those files. Tapas is the capture layer;
-you choose what happens to your data next.
+Tapas turns your words into readable local files. Use them with your favorite
+coding agent, write a script, or build your own agent harness. Any tool that can
+read files can work with your data.
 
-Future skills or MCP tools can make access more convenient, but the files remain
-the primary interface. Any analysis happens through tools you choose and give access to.
+**Your files are the interface.**
+
+Saved transcripts belong to you, in plain Markdown under `~/Documents/tapas/`.
+Open them in a text editor, point Claude Code or Codex at the folder, or build a
+workflow we have never imagined. You choose which tools get access and where
+their analysis runs.
+
+Files come first; integrations are optional conveniences. Reading and using your
+saved transcripts does not depend on a Tapas account, a proprietary API, an
+export operation, or an MCP server. Future integrations should make the files
+easier to use while keeping that direct access intact.
 
 Under the hood, a few [Desert Ant](https://desertant.com) models chained together. Audio and transcripts are processed locally. Model downloads and SDK usage/licensing reporting use the network; see [privacy details](PRIVACY.md).
 
@@ -60,6 +67,7 @@ Click the pintxo in the menu bar for **Tools**, searchable **Recent** files and 
 - [`NOTICE.md`](NOTICE.md) — Desert Ant license and attribution
 - [Native implementation and verification](design/tapas/IMPLEMENTATION.md) — native code, test coverage and remaining device checks
 - [Design direction and prototype](design/tapas/README.md) — Pintxo / Gráfico, onboarding and product behaviors
+- [Product messaging](design/tapas/MESSAGING.md) — the product promise, landing-page copy and files-first principle
 
 ## License
 

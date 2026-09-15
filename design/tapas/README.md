@@ -4,6 +4,12 @@
 
 Tapas’s main brand line pairs the usefulness of small AI tools with the warmth of sharing tapas. Use this wording consistently; uppercase and a line break between the sentences are welcome in visual layouts.
 
+The product promise is **“Capture on your Mac. Keep your files. Build whatever comes next.”**
+The guiding principle is **“Your files are the interface.”** People can use a
+coding agent, write scripts, or build their own agent harness around readable
+local files. Files come first; integrations are optional conveniences. See
+[approved product messaging](MESSAGING.md) for the landing-page copy and demonstration.
+
 The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. The four ingredients belong to the brand, not to individual products; their count stays fixed as the catalog grows. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
 
 The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta remains a concept for its next iteration.
@@ -44,6 +50,7 @@ The pintxo assembles during setup, transforms into four voice bars arranged hori
 - [dictado-motion.html](dictado-motion.html), [dictado-motion.css](dictado-motion.css), [dictado-motion.js](dictado-motion.js): focused popup placement and motion study.
 - [IMPLEMENTATION.md](IMPLEMENTATION.md): native Dictado implementation and verification.
 - [BEHAVIORS.md](BEHAVIORS.md): flow decisions, recovery behavior and native implementation boundaries.
+- [MESSAGING.md](MESSAGING.md): approved product promise, supporting copy and files-first principle.
 
 In the browser prototype, speech, permissions, model preparation, app audio, capture and file search are simulated. Sample data and preferences stay in memory until reload. Explicit export buttons download sample Markdown; copy buttons use the browser clipboard. Nothing records audio or reads your folders.
 
