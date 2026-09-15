@@ -11,6 +11,23 @@
 </p>
 <p align="center">Apple silicon · macOS 15 or later</p>
 
+## Why Tapas?
+
+Tapas are small Spanish dishes enjoyed together, often over a conversation.
+That is the idea behind the app: a plate of small, useful tools, each with a
+clear job. Reach for Dictado to put a thought into words, or Acta to keep a
+conversation. Choose what you need throughout your day.
+
+The colorful mark is our **pintxo**, inspired by the Basque bite often held
+together with a small pick. Four distinct ingredients—saffron, cobalt, paprika
+and olive—come together on one pick. That shared identity carries through the
+app: tools with their own purpose, a familiar home, and a little personality.
+
+Even the names describe what the tools do: **dictado** means dictation in
+Spanish; an **acta** is the written record of a meeting. **Small tools. Good
+company.** brings those useful little companions and the warmth of sharing
+tapas into one line.
+
 ## Two small tools for your words
 
 ### Dictado — say it, then get on with it
