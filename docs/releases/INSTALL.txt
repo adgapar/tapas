@@ -1,38 +1,37 @@
 Tapas — Small tools. Good company.
-0.1.0 Preview 1 · Dictado
+0.1.0 Preview 2 · Dictado + Acta
 
 Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
-Acta is still in development. This preview includes working Dictado only.
 
-1. Quit an older copy of Tapas if it is running.
-2. Drag Tapas to Applications. Eject this disk image.
-3. Open Tapas from Applications and complete its short setup.
-4. Allow microphone access. Enable Accessibility for the installed Tapas to use
-   the global shortcut and automatic paste.
-5. Download the voice models during setup, then try a practice take.
+1. Quit any running copy of Tapas from its menu-bar menu. Finish or discard any
+   active recording first.
+2. Drag Tapas onto Applications. Choose Replace if an older copy is installed.
+3. Eject this disk image, then open Tapas from Applications.
+4. Complete setup if this is your first install. Voice models download once.
+   Existing settings, models and transcripts are kept.
+5. Allow microphone access. Accessibility enables Dictado's global shortcut and
+   automatic paste. If an old development copy is still listed, remove its
+   Accessibility entry and add the Tapas installed in Applications.
 
-This preview is ad-hoc signed and has not been notarized by Apple. macOS may
-block the first launch. If you trust this download, try opening it, then use
-System Settings > Privacy & Security > Open Anyway.
-Apple's instructions: https://support.apple.com/102445
+Tapas lives in the menu bar. Open Your plate for Tools, Recent and Preferences.
+Dictado: press Control–Option (or your shortcut) to start and finish a take.
+Acta: open it from Tools or accept its suggestion when another app uses the mic.
+Choose the meeting app and grant Screen & System Audio Recording access when
+asked. Start only when everyone is ready to be recorded. Pause stops both inputs.
 
-For existing testers: grant permissions to the copy in Applications. If macOS
-still recognizes an older development copy, remove the old Accessibility entry,
-add the installed Tapas, then quit and reopen it. Your settings, models and
-history do not need to be deleted.
+Tapas checks for updates and downloads them automatically. Updates install when
+you quit or choose to restart; active recordings and recovery delay restarting.
+Use Your plate → More → Check for Updates, or change update settings in Preferences.
+Future updates become available when a new signed release is published.
 
-Tapas lives in the menu bar. Open Your plate to change the shortcut or settings.
-Press Control–Option (or your chosen shortcut), speak, then press again to finish.
-Escape cancels. Hover over the small recording tab for Finish / Cancel controls.
-Live words are optional; the recording signal stays visible either way.
+Dictado's optional redacted history: ~/Documents/tapas/dictado/
+Acta's full meeting transcripts: ~/Documents/tapas/acta/
+Acta recovery: ~/Library/Application Support/Tapas/ActaRecovery/
 
-Recognition runs on this Mac. Setup needs internet access to download models.
-The Desert Ant SDK also sends usage/licensing metadata, not audio or transcripts.
-See PRIVACY.md and NOTICE.md on this disk image for details.
+Recognition runs on this Mac. Model downloads and SDK usage/licensing reporting
+and update checks/downloads use the network. See PRIVACY.md and NOTICE.md for details.
 
-Optional redacted history: ~/Documents/tapas/dictado/
-Paste or save failures keep the text available for copy, export and retry.
-Recover unsaved text before quitting; recovery held in memory does not survive
-app termination. English filler sounds are removed from finished takes.
+Acta's live-call accuracy, microphone attribution and device changes still need
+broader testing. This is a development preview, not the completed product launch.
 
 Preview feedback: https://github.com/adgapar/tapas/issues

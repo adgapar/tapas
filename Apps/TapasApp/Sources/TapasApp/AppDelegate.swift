@@ -10,6 +10,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menu: MenuBarController?
     private var setup: SetupWindowController?
     private let overlay = OverlayPanel()
+    private let acta = ActaController()
+    private let meetingPrompt = MeetingPromptController()
+    private let updater = AppUpdater()
     private let hotkey = HotkeyMonitor()
     private let mic = MicRecorder()
     private let catalog = DesertCatalog()
@@ -20,10 +23,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastHistoryURL: URL?
     private var previousApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
+    private var dictadoRequested = false
     private var noticeTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let defaults = UserDefaults.standard
+        model.settings.meetingPromptsEnabled = defaults.object(forKey: "meetingPromptsEnabled") as? Bool ?? true
         model.settings.overlayEnabled = defaults.object(forKey: "overlayEnabled") as? Bool ?? true
         model.settings.historyEnabled = defaults.object(forKey: "historyEnabled") as? Bool ?? true
         if let data = defaults.data(forKey: "hotkey"), let value = try? JSONDecoder().decode(Hotkey.self, from: data) { model.settings.hotkey = value }
@@ -34,6 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkey.onRecorded = { [weak self] value in Task { @MainActor in self?.applyHotkey(value) } }
         hotkey.onRecordCancelled = { [weak self] in Task { @MainActor in self?.model.recordingShortcut = false } }
         hotkey.installLocalMonitor()
+        acta.dictadoIsBusy = { [weak self] in
+            guard let self else { return true }
+            return dictadoRequested || model.snapshot.phase.isActive || setup?.window?.isVisible == true
+        }
+        acta.onSaved = { [weak self] in self?.reloadHistory() }
+        acta.onSetup = { [weak self] in self?.presentSetup() }
         let actions = makeActions()
         overlay.configure(actions: actions)
         menu = MenuBarController(model: model, actions: actions)
@@ -48,6 +59,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if app.processIdentifier != ProcessInfo.processInfo.processIdentifier { self?.previousApplication = app }
             }
         }
+        meetingPrompt.enabled = model.settings.meetingPromptsEnabled
+        meetingPrompt.canPrompt = { [weak self] in
+            guard let self else { return false }
+            return acta.model.ready && !acta.model.busy && !acta.isWindowVisible && !dictadoRequested
+                && !model.snapshot.phase.isActive && model.snapshot.phase != .recovery
+                && setup?.window?.isVisible != true && UserDefaults.standard.bool(forKey: "setupComplete")
+        }
+        meetingPrompt.actaInProgress = { [weak self] in self?.acta.model.hasSession == true }
+        meetingPrompt.onStart = { [weak self] app in Task { await self?.acta.startSuggested(app) } }
+        meetingPrompt.onAvailability = { [weak self] message in self?.model.meetingDetectionError = message }
+        meetingPrompt.start()
+        updater.isBusy = { [weak self] in
+            guard let self else { return true }
+            return dictadoRequested || model.snapshot.phase.isActive || model.snapshot.phase == .recovery
+                || acta.model.hasSession || acta.model.busy || setup?.window?.isVisible == true
+        }
+        model.updates = updater.model
+        updater.start()
         startRefreshing()
         reloadHistory()
         if defaults.bool(forKey: "setupComplete") {
@@ -79,7 +108,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             retryPaste: { [weak self] in Task { await self?.retryPaste() } },
             retrySave: { [weak self] in Task { await self?.session?.retrySave(); self?.reloadHistory() } },
             cancel: { [weak self] in Task { await self?.cancel() } },
-            quit: { NSApp.terminate(nil) }
+            quit: { NSApp.terminate(nil) },
+            acta: { [weak self] in self?.menu?.close(); self?.acta.show() },
+            checkForUpdates: { [weak self] in self?.menu?.close(); self?.updater.check() },
+            setUpdateChecks: { [weak self] in self?.updater.setAutomaticChecks($0) },
+            setUpdateDownloads: { [weak self] in self?.updater.setAutomaticDownloads($0) }
         )
     }
 
@@ -87,8 +120,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu?.close()
         if setup?.window?.isVisible == true { setup?.show(); return }
         // Never switch an active take into practice or discard retained words.
-        guard !model.snapshot.phase.isActive, model.snapshot.phase != .recovery else {
-            showNotice("Finish or recover your current take before opening setup.")
+        guard !model.snapshot.phase.isActive, model.snapshot.phase != .recovery, !acta.model.hasSession, !acta.model.busy else {
+            showNotice("Finish or recover your current recording before opening setup.")
             menu?.show()
             return
         }
@@ -152,8 +185,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let task = Task { [self] in
             try await catalog.download()
             let voz = try await makeVoz()
+            let pipeline = TranscriptionPipeline(recognizer: VozRecognizer(voz: voz), ear: EarDetector(ear: catalog.ear), fillers: UhmAnalyzer(uhm: catalog.uhm))
             let created = DictationSession(
-                pipeline: TranscriptionPipeline(recognizer: VozRecognizer(voz: voz), ear: EarDetector(ear: catalog.ear), fillers: UhmAnalyzer(uhm: catalog.uhm)),
+                pipeline: pipeline,
                 paster: paster,
                 history: HistoryWriter(directory: model.settings.historyDirectory, redactor: DesertRedactor(redactor: catalog.redactor)),
                 models: catalog, microphone: mic)
@@ -161,6 +195,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             session = created
             mic.onSamples = { samples in Task { await created.ingest(samples: samples, sampleRate: 16_000) } }
             model.ready = true
+            await acta.configure(pipeline: pipeline, root: model.settings.historyDirectory.deletingLastPathComponent())
         }
         prepareTask = task
         defer { prepareTask = nil; model.warming = false }
@@ -169,12 +204,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func talk(fromUI: Bool = false) async {
+        guard !dictadoRequested else { return }
+        dictadoRequested = true
+        defer { dictadoRequested = false }
         if setup?.window?.isVisible == true { await setup?.handleTalk(); return }
         guard let session else { presentSetup(); return }
         let snapshot = await session.snapshot()
         if snapshot.phase == .recovery { menu?.show(); return }
         if snapshot.phase == .listening { await session.toggle(); return }
         guard !snapshot.phase.isActive else { return }
+        guard await acta.pauseForDictado() else {
+            showNotice("Acta is changing recording state. Try Dictado again in a moment.")
+            return
+        }
         if fromUI {
             menu?.close()
             previousApplication?.activate()
@@ -186,6 +228,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         paster.practiceMode = false
         await session.setHistoryEnabled(model.settings.historyEnabled)
         await session.toggle()
+        model.snapshot = await session.snapshot()
     }
 
     private func cancel() async {
@@ -207,7 +250,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self else { return }
                 let snap = await session?.snapshot() ?? OverlaySnapshot()
                 if model.snapshot != snap { model.snapshot = snap }
-                menu?.update(snap)
+                await acta.refresh()
+                updater.refresh()
+                model.actaStatus = acta.model.hasSession ? "Acta · \(acta.model.status)" : nil
+                model.actaRecording = acta.model.snapshot.phase == .recording
+                menu?.update(snap, actaStatus: model.actaStatus)
                 overlay.model.showLiveWords = model.settings.overlayEnabled
                 overlay.apply(snap, suppressed: setup?.window?.isVisible == true || menu?.isShown == true)
                 if snap.historyURL != lastHistoryURL {
@@ -241,6 +288,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func savePreferences() {
         let defaults = UserDefaults.standard
+        defaults.set(model.settings.meetingPromptsEnabled, forKey: "meetingPromptsEnabled")
+        meetingPrompt.enabled = model.settings.meetingPromptsEnabled
         defaults.set(model.settings.overlayEnabled, forKey: "overlayEnabled")
         defaults.set(model.settings.historyEnabled, forKey: "historyEnabled")
         if let data = try? JSONEncoder().encode(model.settings.hotkey) { defaults.set(data, forKey: "hotkey") }
@@ -255,18 +304,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let directory = model.settings.historyDirectory
         historyTask = Task { [weak self] in
             do {
-                let entries = try await Task.detached { try HistoryLibrary.read(directory: directory) }.value
+                let entries = try await Task.detached {
+                    let dictado = try HistoryLibrary.read(directory: directory)
+                    let acta = try HistoryLibrary.read(directory: directory.deletingLastPathComponent().appendingPathComponent("acta"))
+                    return (dictado + acta).sorted { $0.date > $1.date }
+                }.value
                 guard !Task.isCancelled else { return }
                 self?.model.entries = entries
                 self?.model.libraryError = nil
-            } catch { self?.model.libraryError = "History couldn’t be read. Check access to Documents/tapas/dictado." }
+            } catch { self?.model.libraryError = "History couldn’t be read. Check access to Documents/tapas." }
         }
     }
 
     private func revealHistory() {
         do {
-            try FileManager.default.createDirectory(at: model.settings.historyDirectory, withIntermediateDirectories: true)
-            NSWorkspace.shared.open(model.settings.historyDirectory)
+            let root = model.settings.historyDirectory.deletingLastPathComponent()
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+            NSWorkspace.shared.open(root)
         } catch { showNotice("The history folder couldn’t be opened. Check access to Documents.") }
     }
 
@@ -315,6 +369,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        if acta.model.hasSession || acta.model.busy {
+            showNotice("Finish and save your Acta meeting before quitting.")
+            acta.show()
+            return .terminateCancel
+        }
         if model.snapshot.phase == .finishing {
             showNotice("Dictado is finishing your words. Try quitting again once they’re ready.")
             menu?.show()
@@ -334,6 +393,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         refreshTask?.cancel(); historyTask?.cancel(); noticeTask?.cancel()
         hotkey.stop()
+        meetingPrompt.stop()
         if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }
     }
 }

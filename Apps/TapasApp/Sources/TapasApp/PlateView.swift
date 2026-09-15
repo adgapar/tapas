@@ -12,6 +12,7 @@ final class PlateModel {
     var warming = false
     var progress: Double = 0
     var modelError: String?
+    var meetingDetectionError: String?
     var settings = TapasSettings()
     var entries: [HistoryEntry] = []
     var libraryError: String?
@@ -20,6 +21,9 @@ final class PlateModel {
     var selected: HistoryEntry?
     var notice: String?
     var recordingShortcut = false
+    var actaStatus: String?
+    var actaRecording = false
+    var updates = UpdateModel()
 }
 
 struct PlateActions {
@@ -36,6 +40,10 @@ struct PlateActions {
     var retrySave: () -> Void
     var cancel: () -> Void
     var quit: () -> Void
+    var acta: () -> Void = {}
+    var checkForUpdates: () -> Void = {}
+    var setUpdateChecks: (Bool) -> Void = { _ in }
+    var setUpdateDownloads: (Bool) -> Void = { _ in }
 }
 
 struct PlateView: View {
@@ -77,6 +85,7 @@ struct PlateView: View {
                 Spacer()
                 Menu {
                     Button("Setup…", action: actions.setup)
+                    Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
                     Button("Powered by Desert Ant Labs") { NSWorkspace.shared.open(URL(string: "https://desertant.com")!) }
                     Divider()
                     Button("Quit Tapas", action: actions.quit)
@@ -98,7 +107,7 @@ struct PlateView: View {
             if let error = model.modelError { NoticeBox(text: error, error: true) }
             Button(action: model.ready && model.microphoneGranted ? actions.talk : actions.setup) {
                 HStack {
-                    Text(model.snapshot.phase == .listening ? "Finish take" : model.snapshot.phase == .finishing ? "Finishing…" : model.ready && model.microphoneGranted ? "Start a take" : "Finish setup")
+                    Text(model.snapshot.phase == .listening ? "Finish take" : model.snapshot.phase == .finishing ? "Finishing…" : model.ready && model.microphoneGranted ? (model.actaRecording ? "Pause Acta & talk" : "Start a take") : "Finish setup")
                     Spacer(); Text(model.settings.hotkey.label)
                 }
             }.buttonStyle(GraficoButtonStyle()).disabled(model.snapshot.phase == .finishing || model.snapshot.phase == .starting || model.snapshot.phase == .recovery)
@@ -109,20 +118,18 @@ struct PlateView: View {
                 Button("Shortcut & paste settings", action: actions.setup).buttonStyle(.plain).font(.system(size: 11))
             }
             Divider()
-            future("Acta", "Be there. Keep the conversation.", "IN DEV", "text.bubble", Grafico.cobalt)
+            Button(action: actions.acta) {
+                HStack(spacing: 12) {
+                    ToolGlyph(symbol: "text.bubble", color: Grafico.cobalt)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Acta").font(.system(size: 15, weight: .semibold))
+                        Text(model.actaStatus ?? "Be there. Keep the conversation.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                    }
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                }.padding(.vertical, 6).contentShape(Rectangle())
+            }.buttonStyle(.plain)
         }
-    }
-
-    private func future(_ title: String, _ subtitle: String, _ badge: String, _ symbol: String, _ color: Color) -> some View {
-        HStack(spacing: 12) {
-            ToolGlyph(symbol: symbol, color: color)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 13, weight: .semibold))
-                Text(subtitle).font(.system(size: 10)).foregroundStyle(Grafico.muted)
-            }
-            Spacer(minLength: 0)
-            Text(badge).font(.system(size: 8, weight: .medium, design: .monospaced)).padding(5).background(Grafico.paper, in: RoundedRectangle(cornerRadius: 3))
-        }.accessibilityElement(children: .combine)
     }
 
     @ViewBuilder private var recent: some View {
@@ -137,13 +144,13 @@ struct PlateView: View {
             }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([entry.url]) }.buttonStyle(.plain)
         } else {
-            TextField("Find a thought…", text: $model.query).textFieldStyle(.roundedBorder).accessibilityLabel("Search recent dictations")
+            TextField("Find a thought…", text: $model.query).textFieldStyle(.roundedBorder).accessibilityLabel("Search recent transcripts")
             if let error = model.libraryError { NoticeBox(text: error, error: true) }
             let entries = model.entries.filter { model.query.isEmpty || ($0.text + $0.url.lastPathComponent).localizedCaseInsensitiveContains(model.query) }
             if entries.isEmpty {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(model.query.isEmpty ? "Room for your first thought." : "No matching thoughts.").font(.system(size: 20, design: .serif)).italic()
-                    Text(model.query.isEmpty ? "Finished takes appear here when history is on." : "Try another word.").font(.system(size: 12)).foregroundStyle(Grafico.muted)
+                    Text(model.query.isEmpty ? "Acta meetings and Dictado takes with history on appear here." : "Try another word.").font(.system(size: 12)).foregroundStyle(Grafico.muted)
                 }.padding(.vertical, 30)
             }
             ForEach(entries) { entry in
@@ -174,9 +181,25 @@ struct PlateView: View {
             if model.recordingShortcut { NoticeBox(text: "Press your new shortcut. Escape keeps the current one.") }
             Toggle("Show live words", isOn: $model.settings.overlayEnabled).onChange(of: model.settings.overlayEnabled) { _, _ in actions.preferencesChanged() }
             Text("Preview your words as you speak. The recording signal stays visible; hover to finish or cancel.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            Toggle("Save a history", isOn: $model.settings.historyEnabled).onChange(of: model.settings.historyEnabled) { _, _ in actions.preferencesChanged() }
-            Text("Keep a redacted Markdown copy after each take. Changing this applies to your next take.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            Toggle("Save Dictado history", isOn: $model.settings.historyEnabled).onChange(of: model.settings.historyEnabled) { _, _ in actions.preferencesChanged() }
+            Text("Keep a redacted Markdown copy after each take. Changing this applies to your next take. Acta always saves its full meeting transcript.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             Divider()
+            Toggle("Suggest Acta when the microphone is in use", isOn: $model.settings.meetingPromptsEnabled)
+                .onChange(of: model.settings.meetingPromptsEnabled) { _, _ in actions.preferencesChanged() }
+            Text("Offer to record when another app uses your microphone. Nothing is recorded until you choose Start Acta. No calendar connection needed.")
+                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            if let error = model.meetingDetectionError { NoticeBox(text: error, error: true) }
+            Divider()
+            if model.updates.available {
+                Text("Updates").font(.system(size: 15, weight: .semibold))
+                Toggle("Automatically check for updates", isOn: Binding(get: { model.updates.automaticallyChecks }, set: { actions.setUpdateChecks($0) }))
+                Toggle("Download updates automatically", isOn: Binding(get: { model.updates.automaticallyDownloads }, set: { actions.setUpdateDownloads($0) }))
+                    .disabled(!model.updates.automaticallyChecks)
+                Text("Install updates in the app. Recording and unsaved words take priority over restarting.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                if model.updates.waitingForRecording { NoticeBox(text: "An update is ready. Finish or recover your recording before Tapas restarts.") }
+                Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
+                Divider()
+            }
             HStack { Text("Paste access"); Spacer(); Text(model.accessibilityTrusted ? "Allowed" : "Off").foregroundStyle(Grafico.muted) }
             Button("Microphone & Accessibility…", action: actions.setup).buttonStyle(.plain)
             Text("25 European languages · automatic\nVoice processing stays on this Mac.").font(.system(size: 11)).lineSpacing(4).foregroundStyle(Grafico.muted)

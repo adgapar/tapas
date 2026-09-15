@@ -66,6 +66,8 @@ Prototype limitation: switching journeys cancels a Dictado take and its pending 
 
 ## Acta: stay for the conversation
 
+The table below describes the HTML study. The [native implementation](../../docs/ACTA.md) now captures real app/microphone audio, persists recovery and saves full transcripts. Its current interruption policy pauses both inputs on stream failure or app termination, and resume is explicit. Pending recognition may finish while capture is paused. Live-call verification remains.
+
 Acta captures a meeting through the microphone and one chosen app, without joining as a bot. This preview uses Meet, Zoom and Teams as sample choices. It does not connect to those apps.
 
 | State | Behavior |

@@ -31,3 +31,9 @@ Free while each model stays under 100,000 monthly active devices on macOS. Above
 Downloading a model is acceptance of those terms.
 
 Voz is NVIDIA Parakeet TDT 0.6B v3 (CC BY 4.0) converted to Core ML by Desert Ant. Weights unchanged. Their conversion and runtime are under the Desert Ant license.
+
+## Sparkle
+
+Tapas uses [Sparkle](https://sparkle-project.org), the open-source macOS updater,
+under its MIT license. Sparkle and its bundled components’ license notices are
+included in the app at `Contents/Resources/Notices/Sparkle-LICENSE.txt`.

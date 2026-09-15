@@ -28,17 +28,20 @@ public enum SetupGate {
 public struct TapasSettings: Equatable, Sendable {
     public var overlayEnabled: Bool
     public var historyEnabled: Bool
+    public var meetingPromptsEnabled: Bool
     public var historyDirectory: URL
     public var hotkey: Hotkey
 
     public init(
         overlayEnabled: Bool = true,
         historyEnabled: Bool = true,
+        meetingPromptsEnabled: Bool = true,
         historyDirectory: URL = Self.defaultHistoryDirectory,
         hotkey: Hotkey = .standard
     ) {
         self.overlayEnabled = overlayEnabled
         self.historyEnabled = historyEnabled
+        self.meetingPromptsEnabled = meetingPromptsEnabled
         self.historyDirectory = historyDirectory
         self.hotkey = hotkey
     }

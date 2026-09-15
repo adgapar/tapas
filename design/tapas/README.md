@@ -12,7 +12,7 @@ local files. Files come first; integrations are optional conveniences. See
 
 The selected design direction: modern, playful local AI tools, represented by four faceless ingredients on one shared pick. The four ingredients belong to the brand, not to individual products; their count stays fixed as the catalog grows. Character comes from the shapes and their movement. This is the single maintained design prototype; the earlier visual comparisons have been removed.
 
-The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta remains a concept for its next iteration.
+The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta also has a native implementation; see [capture, recovery and remaining verification](../../docs/ACTA.md).
 
 ## Preview
 
@@ -54,4 +54,4 @@ The pintxo assembles during setup, transforms into four voice bars arranged hori
 
 In the browser prototype, speech, permissions, model preparation, app audio, capture and file search are simulated. Sample data and preferences stay in memory until reload. Explicit export buttons download sample Markdown; copy buttons use the browser clipboard. Nothing records audio or reads your folders.
 
-The first public release includes Dictado and Acta. Acta is currently a design preview. Other ideas are kept out of the product catalog; see the [product and identity strategy](../../PRODUCT_STRATEGY.md).
+The first public release includes Dictado and Acta. The HTML Acta journey is a design preview; its native implementation is under device verification. Other ideas are kept out of the product catalog; see the [product and identity strategy](../../PRODUCT_STRATEGY.md).

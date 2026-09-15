@@ -44,7 +44,7 @@ Tapas launches when **Dictado and Acta are both ready**. The first installable a
 
 Both belong in the launch product menu. Development previews must identify unfinished functionality honestly; the full release should offer two functioning tools. Captura and Consulta remain uncommitted ideas. They have no launch cards, locked slots, release dates, or promised sequence.
 
-The first release needs dependable recording, clear start/stop state, appropriate permissions, retained results when delivery fails, and useful local files. Acta still needs its native implementation and its complete meeting experience. A finished visual concept does not make a tool ready to release.
+The first release needs dependable recording, clear start/stop state, appropriate permissions, retained results when delivery fails, and useful local files. Acta now has native capture, a persistent companion, pause/resume and recoverable local transcripts. Both tools still need live-device verification before the two-tool release; implementation alone does not make a tool ready to release.
 
 ## The mark is independent of the catalog
 
@@ -60,7 +60,7 @@ Every tool shares typography, materials, icon treatment, state labels, recovery 
 
 Dictado is brief and peripheral: start recording on the shortcut, show a small signal, optionally show live words, then disappear after delivery. El borde transforms the same four ingredients into voice bars. It must clear the menu bar and camera notch.
 
-Acta lasts longer: its companion must communicate recording, paused state, elapsed time and source problems. The floating pintxo is a visual starting point. These meeting controls and behaviors still need to be designed together; a larger mascot alone is not the experience.
+Acta lasts longer: its companion must communicate recording, paused state, elapsed time and source problems. The native companion places the floating pintxo beside a readable recording state, recorded time, input status and Open/Pause/Resume/Finish controls. See [Acta implementation](docs/ACTA.md) for the current behavior and remaining verification.
 
 ## Growing the plate
 

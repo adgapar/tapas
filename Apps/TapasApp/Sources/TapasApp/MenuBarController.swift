@@ -32,16 +32,16 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
     func close() { popover.performClose(nil) }
-    func update(_ snapshot: OverlaySnapshot) {
+    func update(_ snapshot: OverlaySnapshot, actaStatus: String? = nil) {
         let title: String
         switch snapshot.phase {
         case .starting: title = " Starting"
         case .listening: title = " ● Dictado"
         case .finishing: title = " Finishing"
         case .recovery, .failed: title = " ! Dictado"
-        default: title = ""
+        default: title = actaStatus.map { " \($0)" } ?? ""
         }
         if item.button?.title != title { item.button?.title = title }
-        item.button?.toolTip = snapshot.phase == .idle ? Grafico.tagline : "Dictado · \(snapshot.phase.rawValue)"
+        item.button?.toolTip = snapshot.phase == .idle ? (actaStatus ?? Grafico.tagline) : "Dictado · \(snapshot.phase.rawValue)"
     }
 }

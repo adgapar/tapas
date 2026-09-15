@@ -61,6 +61,31 @@ enum DesignRendering {
             model.tab = tab
             try saveHosted(PlateView(model: model, actions: actions), size: NSSize(width: 410, height: 620), to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
+        try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 360, height: 190), to: directory.appendingPathComponent("acta-suggestion.png"))
+        let acta = ActaController()
+        acta.model.ready = true
+        acta.model.microphoneGranted = true
+        acta.model.apps = [ActaAppSource(id: 42, name: "Meeting app")]
+        acta.model.selectedApp = 42
+        try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-ready.png"))
+        var meeting = ActaDocument(appName: "Meeting app")
+        meeting.duration = 124
+        meeting.segments = [
+            ActaSegment(start: 8, source: .microphone, text: "Let’s leave a little room for the good ideas.", language: "en"),
+            ActaSegment(start: 14, source: .app, text: "We can share a first draft on Friday.", language: "en")
+        ]
+        acta.model.snapshot.document = meeting
+        acta.model.elapsed = 124
+        acta.model.microphoneSeen = true; acta.model.appSeen = true
+        acta.model.microphoneLevel = 0.32; acta.model.appLevel = 0.6
+        for phase in [ActaPhase.recording, .paused, .recovery, .saved] {
+            acta.model.snapshot.phase = phase
+            acta.model.canResume = phase == .paused
+            acta.model.snapshot.message = phase == .recovery ? "The file couldn’t be saved. Your meeting is retained. Retry or export your words." : nil
+            try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-\(phase.rawValue).png"))
+        }
+        acta.model.snapshot.phase = .recording
+        try saveHosted(ActaCompanion(model: acta.model, controller: acta), size: NSSize(width: 330, height: 116), to: directory.appendingPathComponent("acta-companion.png"))
         let overlay = OverlayModel()
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.08, phase: .listening)
         for phase in [DictationPhase.starting, .listening, .finishing, .delivered] {

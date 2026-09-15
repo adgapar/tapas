@@ -1,5 +1,5 @@
 {
-  "originHash" : "5d76060f4a40a3ad646e25394cec64d175f643aa262a8427c8988e3e03afdf07",
+  "originHash" : "facb465b08fae9dff706a30c1193139d4803f680fa85d0fdaea57984e98d9556",
   "pins" : [
     {
       "identity" : "desert-ant-core",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "9e11fdf9566df2e34b9516ac76403b1ff0f839d8",
         "version" : "3.1.0"
+      }
+    },
+    {
+      "identity" : "sparkle",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/sparkle-project/Sparkle",
+      "state" : {
+        "revision" : "eef1a539a373c1f1a320624b1130fc5de7b2e100",
+        "version" : "2.10.0"
       }
     },
     {

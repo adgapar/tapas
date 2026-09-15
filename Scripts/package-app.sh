@@ -7,8 +7,12 @@ APP="$OUTPUT_DIR/Tapas.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Apps/TapasApp/.build/release/Tapas "$APP/Contents/MacOS/Tapas"
+SPARKLE=Apps/TapasApp/.build/artifacts/sparkle/Sparkle
+mkdir -p "$APP/Contents/Frameworks"
+ditto "$SPARKLE/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
 cp Apps/TapasApp/Sources/TapasApp/Info.plist "$APP/Contents/Info.plist"
 mkdir -p "$APP/Contents/Resources/Notices"
+cp "$SPARKLE/LICENSE" "$APP/Contents/Resources/Notices/Sparkle-LICENSE.txt"
 cp NOTICE.md PRIVACY.md "$APP/Contents/Resources/Notices/"
 cp Apps/TapasApp/.build/checkouts/desert-ant-core/LICENSE.md "$APP/Contents/Resources/Notices/Desert-Ant-LICENSE.md"
 cp Apps/TapasApp/.build/checkouts/desert-ant-core/THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/Notices/Desert-Ant-THIRD-PARTY-NOTICES.md"
@@ -18,6 +22,10 @@ trap 'rm -rf "$(dirname "$ICONSET")"' EXIT HUP INT TERM
 "$APP/Contents/MacOS/Tapas" --export-icon "$ICONSET"
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Tapas.icns"
 rm -rf "$(dirname "$ICONSET")"
-# Stable identifier plus ad-hoc signing for a local development bundle.
-codesign --force --deep --sign - "$APP"
+# Local builds stay ad-hoc unless a Developer ID identity is explicitly supplied.
+if [ -n "${TAPAS_SIGNING_IDENTITY:-}" ]; then
+    Scripts/sign-app.sh "$APP"
+else
+    codesign --force --sign - "$APP"
+fi
 echo "built $APP"
