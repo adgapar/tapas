@@ -18,7 +18,7 @@ python3 -m http.server 8765 --directory design/tapas
 
 Open [the prototype](http://localhost:8765/). No build step, dependencies or external assets are needed.
 
-Explore [Dictado placement and motion](dictado-motion.html): three Gráfico popup treatments—bottom-center El plato, top-center El pin, and right-edge El ticket—with a scripted take, optional live words, reduced motion, delivery and recovery. This is a focused interaction study within the selected direction; native placement has not changed. Bottom center is the proposed default, pending review.
+Explore [Dictado form and motion](dictado-motion.html): three smaller Gráfico signals—La miga (188 × 40 px pill), El pintxo (82 × 78 px floating mark), and El borde (124 × 28 px edge tab). El pintxo is the new leading exploration. Click the signal to start or finish; hover or focus for secondary controls. Optional live words appear in a separate two-line caption. Delivery, recovery and reduced motion are interactive. These are HTML concepts; native presentation has not changed.
 
 Use the journey rail to explore onboarding, Dictado, Acta, Your plate, Captura and Consulta. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
 
