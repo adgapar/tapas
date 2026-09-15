@@ -12,18 +12,20 @@
   function enter() { const panel = $('dictado'); panel.classList.remove('reenter'); void panel.offsetWidth; panel.classList.add('reenter'); }
   function render() {
     $('desktop').dataset.state = state;
+    $('popup-anchor').hidden = ['idle','cancelled'].includes(state);
+    document.querySelector('.popup-footer').hidden = state !== 'listening';
     $('morph-demo').dataset.state = state;
     $('morph-label').textContent = state === 'listening' ? 'The same pieces, listening' : state === 'finishing' ? 'Gathering back onto the pick' : state === 'delivered' ? 'Listo. Back together.' : 'Pintxo, at rest';
     $('replay-morph').disabled = state === 'recovery';
     $('status').textContent = labels[state];
     $('recording-token').disabled = ['finishing','recovery'].includes(state);
     $('recording-token').setAttribute('aria-label', state === 'listening' ? 'Finish take' : state === 'finishing' ? 'Finishing your words' : state === 'recovery' ? 'Your words are kept below' : 'Start a take');
-    $('menu-status').textContent = `Tapas · ${state === 'listening' ? '● Recording' : state === 'finishing' ? 'Finishing' : state === 'recovery' ? 'Words kept' : 'Ready'}`;
+    $('menu-status').textContent = state === 'listening' ? 'Tapas · ● Recording' : state === 'finishing' ? 'Tapas · Finishing' : state === 'recovery' ? 'Tapas · Words kept' : 'Tapas';
     $('live-wrap').classList.toggle('collapsed', !($('live-words').checked && ['listening','finishing'].includes(state)));
     $('live-text').textContent = words.slice(Math.max(0,count-10),count).join(' ') || 'Go on. We’re listening.';
     $('finish').hidden = state !== 'listening';
     $('cancel').hidden = state !== 'listening';
-    $('again').hidden = !['delivered','empty','cancelled'].includes(state);
+    $('again').hidden = state !== 'empty';
     $('hint').textContent = ({idle:'A thought away.',listening:'Space to finish',finishing:'Gathering your words',delivered:'In your sample note. Listo.',recovery:'Nothing lost. Take your time.',empty:'No words added to your note.',cancelled:'Nothing saved.'})[state];
     $('recovery').hidden = !['recovery','empty'].includes(state);
     $('recovery-description').textContent = state === 'empty' ? 'Try another take when you’re ready. Your recording signal will stay visible.' : 'The destination wasn’t available. Your words stay here until you place them.';
@@ -64,6 +66,7 @@
   $('finish').addEventListener('click',finish); $('cancel').addEventListener('click',cancel); $('again').addEventListener('click',()=>start()); $('retry').addEventListener('click',()=>{if(state==='recovery')land();});
   $('replay').addEventListener('click',()=>{if(state==='recovery')return;clearTimers();state='idle';start(true);});
   $('replay-morph').addEventListener('click',()=>{if(state==='recovery')return;clearTimers();state='idle';start(true);});
+  $('notched-display').addEventListener('change',()=>{ $('desktop').dataset.notched = String($('notched-display').checked); });
   $('live-words').addEventListener('change',render);
   const reduced=matchMedia('(prefers-reduced-motion: reduce)'); $('quiet-motion').checked=reduced.matches;
   $('quiet-motion').addEventListener('change',()=>document.body.classList.toggle('quiet-motion',$('quiet-motion').checked));
