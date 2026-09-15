@@ -20,6 +20,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     var practiceSnapshot: (() async -> OverlaySnapshot)?
     let model: SetupModel
     private var pollTask: Task<Void, Never>?
+    private var completionReported = false
 
     init(flow: SetupFlow) {
         model = SetupModel(flow: flow)
@@ -115,9 +116,10 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             guard model.completedPractice, !model.phase.isActive else { return }
             model.flow.advance()
         case .finished:
-            onFinished?()
+            reportCompletionIfNeeded()
             window?.close()
         }
+        reportCompletionIfNeeded()
         if model.flow.phase == .kitchen, !model.flow.modelsReady, model.flow.modelError == nil { await prepare() }
     }
 
@@ -145,7 +147,14 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         await refresh()
     }
 
+    func reportCompletionIfNeeded() {
+        guard model.flow.phase == .finished, !completionReported else { return }
+        completionReported = true
+        onFinished?()
+    }
+
     func windowWillClose(_ notification: Notification) {
+        reportCompletionIfNeeded()
         pollTask?.cancel()
         pollTask = nil
         onDismissed?()

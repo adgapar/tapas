@@ -4,12 +4,15 @@ import TapasCore
 
 @MainActor
 final class MenuBarController: NSObject, NSPopoverDelegate {
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
+    private let home: PlateWindowController
     var onOpen: (() -> Void)?
 
     init(model: PlateModel, actions: PlateActions) {
+        home = PlateWindowController(model: model, actions: actions)
         super.init()
+        item.autosaveName = "TapasMainStatusItem"
         let renderer = ImageRenderer(content: PintxoMark().frame(width: 22, height: 22))
         renderer.scale = 2
         item.button?.image = renderer.nsImage
@@ -24,24 +27,23 @@ final class MenuBarController: NSObject, NSPopoverDelegate {
         popover.contentSize = NSSize(width: 410, height: 620)
     }
 
-    var isShown: Bool { popover.isShown }
+    // A background home window must not suppress the recording indicator.
+    var isShown: Bool { popover.isShown || home.window?.isKeyWindow == true }
+    func showHome() {
+        popover.performClose(nil)
+        onOpen?()
+        home.show()
+    }
     @objc private func toggle() { if popover.isShown { close() } else { show() } }
     func show() {
-        guard let button = item.button else { return }
+        guard let button = item.button, button.window != nil else { showHome(); return }
         onOpen?()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
     }
-    func close() { popover.performClose(nil) }
+    func close() { popover.performClose(nil); home.window?.orderOut(nil) }
     func update(_ snapshot: OverlaySnapshot, actaStatus: String? = nil) {
-        let title: String
-        switch snapshot.phase {
-        case .starting: title = " Starting"
-        case .listening: title = " ● Dictado"
-        case .finishing: title = " Finishing"
-        case .recovery, .failed: title = " ! Dictado"
-        default: title = actaStatus.map { " \($0)" } ?? ""
-        }
-        if item.button?.title != title { item.button?.title = title }
-        item.button?.toolTip = snapshot.phase == .idle ? (actaStatus ?? Grafico.tagline) : "Dictado · \(snapshot.phase.rawValue)"
+        let status = snapshot.phase == .idle ? (actaStatus ?? Grafico.tagline) : "Dictado · \(snapshot.phase.rawValue)"
+        item.button?.toolTip = status
+        item.button?.setAccessibilityLabel("Tapas — \(status)")
     }
 }

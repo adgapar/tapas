@@ -4,7 +4,7 @@ import Foundation
 import TapasCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var session: DictationSession?
     private let paster = RoutingPaster()
     private var menu: MenuBarController?
@@ -27,6 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var noticeTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        configureApplicationMenu()
         let defaults = UserDefaults.standard
         model.settings.meetingPromptsEnabled = defaults.object(forKey: "meetingPromptsEnabled") as? Bool ?? true
         model.settings.overlayEnabled = defaults.object(forKey: "overlayEnabled") as? Bool ?? true
@@ -79,15 +80,77 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         updater.start()
         startRefreshing()
         reloadHistory()
-        if defaults.bool(forKey: "setupComplete") {
-            Task { try? await prepareModels() }
-        } else { presentSetup() }
+        menu?.showHome()
+        Task {
+            // Existing users who closed setup after downloading models can
+            // still use their cached models without repeating the walkthrough.
+            let cachedModels = await catalog.isDownloaded
+            if defaults.bool(forKey: "setupComplete") || cachedModels {
+                try? await prepareModels()
+            }
+        }
+        if !defaults.bool(forKey: "setupComplete"), !defaults.bool(forKey: "setupWelcomeSeen"), !defaults.bool(forKey: "setupPresented") {
+            presentSetup()
+        }
         tapasLog("launched Gráfico trusted=\(AXIsProcessTrusted())")
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        if UserDefaults.standard.bool(forKey: "setupComplete") { menu?.show() } else { presentSetup() }
+        showPlate()
         return true
+    }
+
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    @objc private func showPlate() {
+        if setup?.window?.isVisible == true { setup?.window?.close() }
+        menu?.showHome()
+    }
+
+    @objc private func showPreferences() {
+        model.tab = "Preferences"
+        showPlate()
+    }
+
+    @objc private func checkForUpdates() { updater.check() }
+    @objc private func openSetup() { presentSetup() }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        menuItem.action != #selector(checkForUpdates) || model.updates.canCheck
+    }
+
+    private func configureApplicationMenu() {
+        let bar = NSMenu()
+        let appItem = NSMenuItem()
+        let appMenu = NSMenu(title: "Tapas")
+        func add(_ title: String, _ action: Selector, _ key: String = "") {
+            let item = appMenu.addItem(withTitle: title, action: action, keyEquivalent: key)
+            item.target = self
+        }
+        add("Show Tapas", #selector(showPlate), "0")
+        add("Preferences…", #selector(showPreferences), ",")
+        add("Setup…", #selector(openSetup))
+        add("Check for Updates…", #selector(checkForUpdates))
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Hide Tapas", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Quit Tapas", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appItem.submenu = appMenu
+        bar.addItem(appItem)
+        let editItem = NSMenuItem()
+        let edit = NSMenu(title: "Edit")
+        for (title, action, key) in [("Undo", "undo:", "z"), ("Cut", "cut:", "x"), ("Copy", "copy:", "c"), ("Paste", "paste:", "v"), ("Select All", "selectAll:", "a")] {
+            edit.addItem(withTitle: title, action: NSSelectorFromString(action), keyEquivalent: key)
+        }
+        editItem.submenu = edit
+        bar.addItem(editItem)
+        let windowItem = NSMenuItem()
+        let windows = NSMenu(title: "Window")
+        windows.addItem(withTitle: "Minimize", action: #selector(NSWindow.performMiniaturize(_:)), keyEquivalent: "m")
+        windows.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        windowItem.submenu = windows
+        bar.addItem(windowItem)
+        NSApp.mainMenu = bar
+        NSApp.windowsMenu = windows
     }
 
     private func makeActions() -> PlateActions {
@@ -170,10 +233,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 while await session?.snapshot().phase == .finishing { try? await Task.sleep(for: .milliseconds(30)) }
                 paster.practiceMode = false
                 await session?.setHistoryEnabled(model.settings.historyEnabled)
+                menu?.showHome()
             }
         }
         paster.onPractice = { [weak controller] text in controller?.model.practiceText = text }
         setup = controller
+        UserDefaults.standard.set(true, forKey: "setupPresented")
         controller.show()
     }
 

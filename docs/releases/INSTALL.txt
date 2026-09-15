@@ -1,5 +1,5 @@
 Tapas — Small tools. Good company.
-0.1.0 · Dictado + Acta
+0.1.1 · Dictado + Acta
 
 Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
 
@@ -13,7 +13,9 @@ Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
    automatic paste. If an old development copy is still listed, remove its
    Accessibility entry and add the Tapas installed in Applications.
 
-Tapas lives in the menu bar. Open Your plate for Tools, Recent and Preferences.
+Open Tapas from the Dock or Applications to reach Your plate: Tools, Recent and
+Preferences. The menu-bar pintxo provides quick access too. Closing the window
+keeps Tapas running; choose Quit Tapas to stop it.
 Dictado: press Control–Option (or your shortcut) to start and finish a take.
 Acta: open it from Tools or accept its suggestion when another app uses the mic.
 Choose the meeting app and grant Screen & System Audio Recording access when

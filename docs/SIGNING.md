@@ -92,7 +92,7 @@ The build does not require Finder automation or screen-recording permission.
 
 ```sh
 TAPAS_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-TAPAS_NOTARY_PROFILE=tapas TAPAS_RELEASE_LABEL=0.1.0 \
+TAPAS_NOTARY_PROFILE=tapas TAPAS_RELEASE_LABEL=0.1.1 \
   Scripts/package-dmg.sh
 ```
 
@@ -115,16 +115,16 @@ do not generate a replacement key for each release.
 
 For every release:
 
-1. Increase `CFBundleVersion` in the app’s Info.plist (0.1.0 is build `3`).
+1. Increase `CFBundleVersion` in the app’s Info.plist (0.1.1 is build `4`).
 2. Build the signed/notarized DMG with a unique release label.
 3. Generate the signed update entry:
 
    ```sh
-   Scripts/prepare-update.sh dist/releases/Tapas-0.1.0-arm64.dmg v0.1.0
+   Scripts/prepare-update.sh dist/releases/Tapas-0.1.1-arm64.dmg v0.1.1
    ```
 
 4. Upload the DMG and checksum to that version’s GitHub release, and publish it.
-5. Upload the generated `dist/updates/v0.1.0/appcast.xml` to the public
+5. Upload the generated `dist/updates/v0.1.1/appcast.xml` to the public
    `updates` release, replacing its previous appcast only after the DMG is live.
 6. Verify the public feed and download, then check from an older installed build.
 

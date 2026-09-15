@@ -7,7 +7,7 @@
 <p align="center">Local dictation and meeting transcripts for Mac.</p>
 <p align="center">
   <a href="https://github.com/adgapar/tapas/releases/latest"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.0">What’s new</a>
+  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.1">What’s new</a>
 </p>
 <p align="center">Apple silicon · macOS 15 or later</p>
 
@@ -60,7 +60,8 @@ the app.
 
 1. **Download** the DMG and drag Tapas into Applications.
 2. **Open Tapas** and follow the short setup to prepare voice models and permissions.
-3. **Find the pintxo in your menu bar** to open Dictado, Acta, Recent and Preferences.
+3. **Open Tapas from the Dock or Applications** for Dictado, Acta, Recent and Preferences.
+   The pintxo in your menu bar is a shortcut to the same tools.
 
 Tapas is signed and notarized for macOS. Future releases arrive through automatic
 updates; you can also choose **Check for Updates…** in the app.

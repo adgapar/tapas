@@ -46,7 +46,7 @@ enum Tapas {
         let delegate = AppDelegate()
         self.delegate = delegate
         app.delegate = delegate
-        app.setActivationPolicy(.accessory)
+        app.setActivationPolicy(.regular)
         app.run()
     }
 }
