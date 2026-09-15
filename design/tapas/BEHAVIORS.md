@@ -46,6 +46,12 @@ Leaving setup returns to Your plate. Continue setup resumes at microphone access
 
 The overlay preference controls live words; the status remains visible when the overlay is off. A canceled take creates no history entry. The sample Notes editor retains its contents across journey navigation.
 
+### Popup placement and motion study
+
+[Compare the three treatments in HTML](dictado-motion.html). El plato (bottom center, above the Dock) is the proposed default. El pin explores a dark top-center panel; El ticket explores a paper panel at the right edge. These are review options within Gráfico, not yet native placement settings. The study keeps an idle panel visible for comparison; a production popup should appear only for an active take or its result.
+
+Recording always has a labeled state and an input-level signal. Live words expand the same surface; disabling them collapses only the transcript. The pintxo opens while listening, gathers during finalization, and settles on delivery. The study holds a delivery receipt for 1.6 seconds, then returns to idle; recovery never auto-dismisses. Reduced motion removes animated entrances and ingredient movement while retaining state labels. In production the level must follow actual audio, not the study's scripted animation. The native panel should stay on the display where the take began, preserve destination focus, and clear the Dock or menu bar according to placement. Do not move the panel around in response to individual words.
+
 When Acta is recording, the Dictado button explicitly says “Pause Acta & talk.” Starting the take pauses Acta. The meeting remains paused after dictation until the user resumes it. This is the proposed microphone ownership policy and needs corresponding native audio coordination.
 
 Prototype limitation: switching journeys cancels a Dictado take and its pending completion timer. A production implementation should define and test how closing an overlay differs from canceling capture, and retain completed text through UI changes.

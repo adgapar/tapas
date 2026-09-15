@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f3efdf"><title>Dictado · A little presence.</title>
+<link rel="icon" href="icon.svg"><link rel="stylesheet" href="dictado-motion.css">
+</head>
+<body>
+<header><a class="brand" href="index.html"><img src="icon.svg" alt="" width="28" height="38">tapas<span>/</span></a><span class="mono">GRÁFICO · MOTION STUDY 01</span><a class="back" href="index.html#dictado">The whole plate ↗</a></header>
+<main>
+<section class="intro"><div><p class="eyebrow">DICTADO, IN YOUR PERIPHERAL VISION</p><h1>A little presence.<br><em>A lot of character.</em></h1></div><div class="intro-note"><span class="asterisk" aria-hidden="true">✳</span><p>You speak. The ingredients wake up.<br>A thought lands. Everything settles.</p><small>Three places to put a little good company.</small></div></section>
+<section class="placements" aria-label="Popup design options">
+<button class="placement selected" data-placement="plato" aria-pressed="true"><span class="mini-screen bottom" aria-hidden="true"><i></i><b></b></span><span><span class="option-number">01 / BOTTOM CENTER</span><strong>El plato <em>Our pick</em></strong><span class="option-copy">A small serving, just above the Dock.</span></span><span class="select-dot" aria-hidden="true"></span></button>
+<button class="placement" data-placement="pin" aria-pressed="false"><span class="mini-screen top" aria-hidden="true"><i></i><b></b></span><span><span class="option-number">02 / TOP CENTER</span><strong>El pin</strong><span class="option-copy">A little signal from the menu bar.</span></span><span class="select-dot" aria-hidden="true"></span></button>
+<button class="placement" data-placement="ticket" aria-pressed="false"><span class="mini-screen side" aria-hidden="true"><i></i><b></b></span><span><span class="option-number">03 / RIGHT EDGE</span><strong>El ticket</strong><span class="option-copy">A paper companion beside your work.</span></span><span class="select-dot" aria-hidden="true"></span></button>
+</section>
+<section class="workbench">
+<div class="preview-column">
+<div class="desktop" id="desktop" data-placement="plato" data-state="idle" aria-label="Simulated desktop">
+<div class="wall-art" aria-hidden="true"><i></i><b></b><span>menos,<br><em>pero mejor.</em></span></div>
+<div class="menubar"><span>● &nbsp; <b>Notes</b> <span class="menus"> &nbsp; File &nbsp; Edit &nbsp; View</span></span><span class="menu-status" id="menu-status">Tapas · Ready</span><span>9:41</span></div>
+<div class="note-window"><div class="window-bar"><span aria-hidden="true">● ● ●</span><span>ONE GOOD THOUGHT</span><span>↗</span></div><div class="note-body"><p class="note-date">Tuesday, September 15</p><h2>Leave a little room.</h2><p>Less rushing. More making.<br>Something useful, with a little warmth.</p><label class="sr-only" for="note">Sample note, editable</label><textarea id="note" spellcheck="false" placeholder="Your next thought goes here…"></textarea><div class="note-signature">Small tools. Good company.</div></div></div>
+<div class="dock" aria-hidden="true"><i>↗</i><i>≡</i><i>◉</i><i>✳</i><span></span><img src="icon.svg" alt="" width="20" height="26"></div>
+<div class="popup-anchor" id="popup-anchor">
+<section class="dictado" id="dictado" aria-label="Dictado recording controls">
+<div class="popup-main"><div class="pintxo" aria-hidden="true"><span class="pick"></span><i class="bite saffron"></i><i class="bite cobalt"></i><i class="bite paprika"></i><i class="bite olive"></i></div><div class="status-copy"><span class="popup-eyebrow">DICTADO</span><strong id="status" role="status" aria-live="polite">Ready when you are.</strong></div><div class="signal" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div><span class="timer" id="timer" aria-hidden="true">00:00</span></div>
+<div class="live-wrap" id="live-wrap"><p class="live-text" id="live-text"></p></div>
+<div class="recovery" id="recovery" hidden><p id="recovery-description"></p><p class="retained" id="retained"></p><button id="retry">Put in sample note ↗</button></div>
+<div class="popup-footer"><span id="hint">A thought away.</span><div><button class="cancel" id="cancel" aria-label="Cancel take" hidden>Esc <span>×</span></button><button class="finish" id="finish" hidden><span aria-hidden="true">■</span> Finish</button><button class="again" id="again" hidden>Another take ↗</button></div></div>
+<div class="ingredient-line" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+</section>
+</div>
+<span class="desktop-label">SAMPLE DESKTOP · NO MICROPHONE</span>
+</div>
+<div class="preview-caption"><span id="placement-caption">A steady place to glance. Clear of the menu bar, lifted above the Dock.</span><button id="replay">↻ Play full sequence</button></div>
+</div>
+<aside class="controls" aria-label="Preview controls"><p class="eyebrow">GIVE IT A LITTLE VOICE</p><h2 id="option-title">El plato.</h2><p class="control-description" id="option-description">Warm paper, a soft landing, a little space to breathe. The default I’d ship.</p><button class="primary" id="toggle">Start a take <span>↗</span></button><p class="key-hint"><kbd>Space</kbd> to start / finish · <kbd>Esc</kbd> to cancel</p><div class="control-divider"></div><label class="switch-row"><span>Live words<small>The recording signal always stays.</small></span><input id="live-words" type="checkbox" checked role="switch"></label><label class="switch-row"><span>Quiet motion<small>Same states. Less movement.</small></span><input id="quiet-motion" type="checkbox" role="switch"></label><label class="outcome-label" for="outcome">WHEN YOU FINISH</label><select id="outcome"><option value="delivered">Words land in the note</option><option value="recovery">Paste needs a hand</option><option value="empty">Nothing was heard</option></select><p class="simulation-note">A scripted sentence and audio level. Nothing is recorded or sent. Your sample note stays in this page until reload.</p><div class="motion-note"><span class="eyebrow">THE LITTLE DETAIL</span><p id="motion-detail">The pintxo opens like a breath. On delivery, the four pieces nest back onto their pick.</p></div></aside>
+</section>
+<section class="choreography"><div><p class="eyebrow">PERSONALITY, WITH A PURPOSE</p><h2>One thought.<br><em>Four little moments.</em></h2></div><ol><li><span>01 / ARRIVE</span><h3>Make yourself known.</h3><p>A quick entrance. A clear Listening label. No invisible recording.</p><small>380 ms · gentle overshoot</small></li><li><span>02 / LISTEN</span><h3>Give the words room.</h3><p>Ingredients loosen. The level responds to voice; live text is optional.</p><small>Signal follows audio in the app</small></li><li><span>03 / FINISH</span><h3>Gather the thought.</h3><p>Pieces draw together. The input meter rests. Finishing gets its own label.</p><small>Quiet, repeating working motion</small></li><li><span>04 / LAND</span><h3>A small, satisfied settle.</h3><p>A cobalt check, then back to work. Recovery stays until resolved.</p><small>Receipt holds 1.6 s in the preview</small></li></ol></section>
+<footer><span>Small tools. Good company.</span><span>Placement concepts, not native settings yet.</span><a href="BEHAVIORS.md">Behavior notes ↗</a></footer>
+</main><script src="dictado-motion.js"></script>
+</body></html>

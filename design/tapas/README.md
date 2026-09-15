@@ -18,6 +18,8 @@ python3 -m http.server 8765 --directory design/tapas
 
 Open [the prototype](http://localhost:8765/). No build step, dependencies or external assets are needed.
 
+Explore [Dictado placement and motion](dictado-motion.html): three Gráfico popup treatments—bottom-center El plato, top-center El pin, and right-edge El ticket—with a scripted take, optional live words, reduced motion, delivery and recovery. This is a focused interaction study within the selected direction; native placement has not changed. Bottom center is the proposed default, pending review.
+
 Use the journey rail to explore onboarding, Dictado, Acta, Your plate, Captura and Consulta. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
 
 ## Selected visual language
@@ -39,6 +41,7 @@ The pintxo assembles during setup, separates while listening, shifts while worki
 - [style.css](style.css): Gráfico design, motion and responsive layouts.
 - [app.js](app.js): connected interactions and sample content.
 - [icon.svg](icon.svg): selected faceless pintxo mark.
+- [dictado-motion.html](dictado-motion.html), [dictado-motion.css](dictado-motion.css), [dictado-motion.js](dictado-motion.js): focused popup placement and motion study.
 - [IMPLEMENTATION.md](IMPLEMENTATION.md): native Dictado implementation and verification.
 - [BEHAVIORS.md](BEHAVIORS.md): flow decisions, recovery behavior and native implementation boundaries.
 
