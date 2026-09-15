@@ -62,15 +62,24 @@ enum DesignRendering {
             try saveHosted(PlateView(model: model, actions: actions), size: NSSize(width: 410, height: 620), to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
         let overlay = OverlayModel()
-        overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.1, phase: .listening)
-        try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 205), to: directory.appendingPathComponent("dictado-listening.png"))
-        overlay.showLiveWords = false
-        for phase in [DictationPhase.starting, .listening, .finishing] {
+        overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.08, phase: .listening)
+        for phase in [DictationPhase.starting, .listening, .finishing, .delivered] {
             overlay.snapshot.phase = phase
-            try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 140), to: directory.appendingPathComponent("dictado-compact-\(phase.rawValue).png"))
+            try saveHosted(DictadoOverlay(model: overlay, actions: actions).transaction { $0.animation = nil; $0.disablesAnimations = true }, size: NSSize(width: 124, height: 28), to: directory.appendingPathComponent("dictado-\(phase.rawValue).png"))
         }
+        overlay.snapshot.phase = .listening
+        try saveHosted(DictadoCaption(model: overlay), size: NSSize(width: 340, height: 62), to: directory.appendingPathComponent("dictado-caption.png"))
+        try saveHosted(DictadoControls(model: overlay, actions: actions), size: NSSize(width: 190, height: 32), to: directory.appendingPathComponent("dictado-controls.png"))
+        let study = VStack(spacing: 4) {
+            DictadoSignal(model: overlay, actions: actions)
+            DictadoControls(model: overlay, actions: actions)
+            DictadoCaption(model: overlay).padding(.top, 4)
+        }.padding(30).frame(width: 420, height: 210).background(Grafico.paper)
+        try saveHosted(study.transaction { $0.animation = nil; $0.disablesAnimations = true }, size: NSSize(width: 420, height: 210), to: directory.appendingPathComponent("dictado-study.png"))
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "Nos vemos en la terraza a las seis.", message: "Paste wasn’t available. Copy your words or retry in the original app.", phase: .recovery, pasteFailed: true)
-        try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 448, height: 405), to: directory.appendingPathComponent("dictado-recovery.png"))
+        try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 384, height: 370), to: directory.appendingPathComponent("dictado-recovery.png"))
+        overlay.snapshot = OverlaySnapshot(isVisible: true, message: "No words came through. Nothing saved. Try another take.", phase: .failed)
+        try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 384, height: 250), to: directory.appendingPathComponent("dictado-no-speech.png"))
     }
     #endif
 }

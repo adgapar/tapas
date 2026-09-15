@@ -19,7 +19,7 @@ Dictado transcribes 25 European languages on device (Voz / Parakeet TDT 0.6B v3)
 
 ## How the hotkey should feel
 
-Press Control-Option (changeable in Preferences). A recording indicator stays visible while you talk; live words are optional. Press it again to finish, or Escape to cancel. Dictado sends the words to the original app and, if history is on, saves a redacted Markdown copy. Failed paste or save operations keep the text available for copy, export or retry.
+Press Control-Option (changeable in Preferences). El borde, a tiny four-color recording tab below the menu bar and camera, stays visible while you talk; live words appear separately when enabled. Press it again to finish, click the tab, or Escape to cancel. Hover over the tab for Finish / Cancel controls. Successful delivery briefly shows “Listo,” then hides it. Dictado sends the words to the original app and, if history is on, saves a redacted Markdown copy. Failed paste or save operations keep the text available for copy, export or retry.
 
 **Orden** is the routing seam and currently always selects Dictado. Broader voice routing remains an uncommitted extension.
 

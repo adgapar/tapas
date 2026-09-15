@@ -181,6 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             try? await Task.sleep(for: .milliseconds(150))
         }
         rememberApplication()
+        overlay.pinToCurrentScreen()
         paster.target = previousApplication
         paster.practiceMode = false
         await session.setHistoryEnabled(model.settings.historyEnabled)
@@ -207,10 +208,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let snap = await session?.snapshot() ?? OverlaySnapshot()
                 if model.snapshot != snap { model.snapshot = snap }
                 menu?.update(snap)
-                var visible = snap
-                if setup?.window?.isVisible == true || menu?.isShown == true { visible.isVisible = false }
                 overlay.model.showLiveWords = model.settings.overlayEnabled
-                overlay.apply(visible)
+                overlay.apply(snap, suppressed: setup?.window?.isVisible == true || menu?.isShown == true)
                 if snap.historyURL != lastHistoryURL {
                     lastHistoryURL = snap.historyURL
                     reloadHistory()

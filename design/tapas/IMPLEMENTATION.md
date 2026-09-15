@@ -6,9 +6,11 @@ The brand and visual direction remain in [README.md](README.md); [BEHAVIORS.md](
 
 - **First taste:** Gráfico setup window, microphone access, optional Accessibility, voice-model preparation and retry, real dictation practice, completion. Setup can be closed and resumed. Models download during setup; a completed installation prepares cached models on launch.
 - **Your plate:** pintxo menu-bar icon, Dictado start/finish, persistent status, Tools / Recent / Preferences, file opening and Finder reveal. The source lists Dictado and Acta only. Acta is marked In dev and has no active native capture behavior; the public release waits for its implementation. Captura and Consulta are absent from the product catalog.
-- **Dictado:** non-activating recording indicator, optional live words, finishing state, Escape cancellation, permission and transcription errors, retained results with copy/export and separate paste/save retries. Turning off Show live words keeps a compact Starting / Listening / Finishing panel with recording controls; it hides only the transcript preview. Setup and Your plate show their own recording status while open. Recovery still displays retained words regardless of this preference.
+- **Dictado:** non-activating recording indicator, optional live words, finishing state, Escape cancellation, permission and transcription errors, retained results with copy/export and separate paste/save retries. El borde is a fixed 124 × 28 point top-edge tab, hidden while idle. The four pintxo ingredients transform into microphone-driven bars over 550 ms, gather during Finishing, then show Listo for 1.6 seconds after successful delivery. Starting appears only while capture opens. Clicking the listening tab finishes; hover or keyboard focus reveals Finish / Cancel. Show live words controls a separate, two-line caption of the most recent words, never the recording signal or retained full transcript. The caption does not intercept clicks. Reduced motion uses static forms and labels. Setup and Your plate show their own recording status while open. Recovery still displays retained words regardless of this preference.
 - **Preferences:** Control–Option, Right Command or a recorded custom shortcut; live transcript preview; history saving. Preferences survive relaunch. Permission state reflects macOS rather than a simulated toggle.
 - **Identity:** shared colors and pintxo drawing in `Grafico.swift`, reduced-motion support, generated app icon, main tagline “Small tools. Good company.”
+
+The take stays on the display under the pointer when it starts. Each refresh recalculates placement six points below both the visible menu area and the display’s camera safe area; a disconnected display falls back to an available one. Separate non-activating panels preserve the tab’s small hit area and do not request focus when appearing. Window sizes are explicitly managed, with SwiftUI hosting constraints disabled. This follows Apple’s [safe-area geometry](https://developer.apple.com/documentation/appkit/nsscreen/safeareainsets), [non-activating panel behavior](https://developer.apple.com/documentation/appkit/nspanel/becomeskeyonlyifneeded), and [hosting sizing options](https://developer.apple.com/documentation/swiftui/nshostingcontroller/sizingoptions). Actual full-screen, display-disconnection and keyboard-focus behavior still needs device testing.
 
 ## Accessibility setup recovery
 
@@ -41,17 +43,17 @@ Closing the practice window cancels an active practice take; an already finishin
 | Identity and controls | `Apps/TapasApp/Sources/TapasApp/Grafico.swift` |
 | Onboarding | `SetupView.swift`, `SetupWindowController.swift` in the app sources |
 | Home and preferences | `PlateView.swift`, `MenuBarController.swift` in the app sources |
-| Recording UI | `OverlayPanel.swift` in the app sources |
+| Recording UI | `OverlayPanel.swift` in the app sources; `Sources/TapasCore/DictadoPresentation.swift` for receipt timing and safe-area placement |
 | App coordination | `AppDelegate.swift`, `HotkeyMonitor.swift`, `MicRecorder.swift`, `AccessibilityPaster.swift` in the app sources |
 | State and files | `Sources/TapasCore/DictationSession.swift`, `HistoryWriter.swift`, `HistoryLibrary.swift` |
 
 ## Verification and remaining device checks
 
-59 automated core tests pass. They cover delivery, independent paste/save recovery, history off, preference changes during a take, cancellation with delayed inference, no-speech handling, concurrent file creation, history parsing, shortcut matching and clipboard restoration on failure. Synthetic English, Spanish and Russian audio also passed through the real cached model pipeline: each produced the expected delivery text, correct `en` / `es` / `ru` metadata and a Markdown file in a temporary directory. These checks use a fixture paster, not the microphone or another app.
+64 automated core tests pass. The new overlay tests cover receipt expiry, a new take interrupting the receipt, suppression during setup or the plate, immediate cancellation, persistent recovery, and menu/camera geometry including a display with negative coordinates. Existing checks cover delivery, independent paste/save recovery, history off, preference changes during a take, cancellation with delayed inference, no-speech handling, concurrent file creation, history parsing, shortcut matching and clipboard restoration on failure. Synthetic English, Spanish and Russian audio also passed through the real cached model pipeline: each produced the expected delivery text, correct `en` / `es` / `ru` metadata and a Markdown file in a temporary directory. These checks use a fixture paster, not the microphone or another app.
 
 One model-quality issue was observed: Redact treated the Russian word “Давайте” as a given name in the saved copy. The delivered transcript remained correct. Redacted history is not a verbatim transcript; inspect multilingual redaction quality before relying on it as an exact record.
 
-The native app builds with Swift Package Manager. Deterministic renders of the actual native views cover all setup phases, the home tabs and Dictado status/recovery.
+The native app builds with Swift Package Manager. Deterministic renders of the actual native views cover all setup phases, the home tabs, the 124 × 28 Starting / Listening / Finishing / Listo states, separate captions and hover controls, plus paste recovery and no-speech retry.
 
 Build and run:
 
@@ -76,8 +78,9 @@ Before treating this as a daily-driver release, verify on the Mac with its real 
 
 1. Complete setup and dictate a sentence into the practice field.
 2. Dictate into Notes and another everyday app, including a field that needs the clipboard fallback.
-3. Confirm the global shortcut and Escape cancellation with Show live words enabled and disabled. With it off, the compact recording indicator and Finish / Cancel controls must remain visible, while the transcript preview stays hidden.
+3. Confirm the global shortcut and Escape cancellation with Show live words enabled and disabled. With it off, the 124 × 28 signal must stay visible and animate with your voice, while the caption stays hidden. Hover for Finish / Cancel, click the signal to finish, and confirm that the destination keeps focus. Successful delivery shows Listo briefly; cancellation immediately hides the signal.
 4. Check that changing the destination during a take leads to text recovery; test copy and retry paste.
-5. Dictate consecutive EN/ES/RU takes, inspect the redacted files, and relaunch to verify preferences and recent history.
+5. Check notch clearance, a hidden menu bar, full screen, a second display, and unplugging that display mid-take. Verify reduced motion and keyboard/VoiceOver access to the controls.
+6. Dictate consecutive EN/ES/RU takes, inspect the redacted files, and relaunch to verify preferences and recent history.
 
-The desktop verification driver currently lacks macOS Accessibility and Screen Recording permissions, so live device capture and cross-app insertion have not been verified by the agent. In-process view renders and mocked audio tests are not substitutes for that check. Synthetic Command–V delivery cannot confirm that every receiving app accepted the paste. Unsaved recovery text remains in memory until copied, exported or saved; it does not survive app termination.
+The user has verified real dictation and custom shortcuts in the earlier build. The agent has not yet verified the new overlay through live microphone capture and cross-app insertion; the desktop driver’s last check had Screen Recording unavailable. In-process view renders and mocked audio tests are not substitutes for that check. Synthetic Command–V delivery cannot confirm that every receiving app accepted the paste. Unsaved recovery text remains in memory until copied, exported or saved; it does not survive app termination.
