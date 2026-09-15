@@ -16,6 +16,8 @@ The Accessibility step always keeps a Continue action visible. If macOS has not 
 
 Open Settings asks macOS to register the running app's permission request before opening the Accessibility pane. If an enabled entry is not recognized, the UI explains how to toggle it or replace the old entry, and Show this Tapas in Finder identifies the current app bundle. Locally rebuilt, ad-hoc-signed apps may need permission to be granted again; an enabled Settings entry alone is not treated as proof of access.
 
+The global shortcut uses an Accessibility-authorized event tap (`defaultTap`) and passes events through unchanged. The previous `listenOnly` mode used the Input Monitoring permission path, even though setup requested Accessibility. Local shortcut practice alone does not verify global operation. Tap health checks now inspect validity and enabled state, retry failed registration at five-second intervals while trusted, and retry immediately when the shortcut changes or access is explicitly rechecked. Registration logs contain status only, never captured keys.
+
 ## Dictation and files
 
 A take uses the microphone and local Voz recognition, with Ear language detection and English filler removal. Orden currently always selects Dictado. Acta and the other future tools are not routed from speech yet.

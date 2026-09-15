@@ -21,17 +21,19 @@ final class HotkeyMonitor: @unchecked Sendable {
     private var port: CFMachPort?
     private var source: CFRunLoopSource?
     private var localMonitor: Any?
-    private var globalMonitor: Any?
     private var lastFire: TimeInterval = 0
-    private var tapAttempted = false
+    private var lastTapAttempt: TimeInterval?
 
-    var tapRunning: Bool { port != nil }
+    var tapRunning: Bool {
+        guard let port, CFMachPortIsValid(port) else { return false }
+        return CGEvent.tapIsEnabled(tap: port)
+    }
 
     func installLocalMonitor() {
         HotkeyMonitor.shared = self
         if localMonitor != nil { return }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
-            if self?.port == nil { self?.handleNSEvent(event) }
+            if self?.tapRunning == false { self?.handleNSEvent(event) }
             return event
         }
     }
@@ -40,22 +42,34 @@ final class HotkeyMonitor: @unchecked Sendable {
     func startTapIfTrusted() -> Bool {
         installLocalMonitor()
         guard AXIsProcessTrusted() else { return false }
-        if let port { CGEvent.tapEnable(tap: port, enable: true); return true }
-        if tapAttempted { return false }
-        tapAttempted = true
+        if let port, CFMachPortIsValid(port) {
+            if !CGEvent.tapIsEnabled(tap: port) {
+                tapper = HotkeyTapper(hotkey: hotkey)
+                CGEvent.tapEnable(tap: port, enable: true)
+            }
+            if tapRunning { return true }
+        }
+        let now = ProcessInfo.processInfo.systemUptime
+        if let lastTapAttempt, now - lastTapAttempt < 5 { return false }
+        lastTapAttempt = now
+        removeTap()
+        tapper = HotkeyTapper(hotkey: hotkey)
         let mask = (1 << CGEventType.keyDown.rawValue)
             | (1 << CGEventType.keyUp.rawValue)
             | (1 << CGEventType.flagsChanged.rawValue)
         guard let port = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
-            options: .listenOnly,
+            // Use the Accessibility permission requested by setup. A listen-only tap
+            // uses Input Monitoring authorization instead. Pass every event through.
+            options: .defaultTap,
             eventsOfInterest: CGEventMask(mask),
             callback: { _, type, event, _ in
                 HotkeyMonitor.shared?.handle(type: type, event: event) ?? Unmanaged.passUnretained(event)
             },
             userInfo: nil
         ) else {
+            tapasLog("global shortcut registration failed; will retry")
             return false
         }
         self.port = port
@@ -63,12 +77,13 @@ final class HotkeyMonitor: @unchecked Sendable {
         self.source = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         CGEvent.tapEnable(tap: port, enable: true)
-        return true
+        tapasLog("global shortcut enabled=\(tapRunning)")
+        return tapRunning
     }
 
     func noteTrustMayHaveChanged() {
         if AXIsProcessTrusted() {
-            tapAttempted = false
+            lastTapAttempt = nil
             _ = startTapIfTrusted()
         }
     }
@@ -94,6 +109,7 @@ final class HotkeyMonitor: @unchecked Sendable {
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            tapper = HotkeyTapper(hotkey: hotkey)
             if let port { CGEvent.tapEnable(tap: port, enable: true) }
             return Unmanaged.passUnretained(event)
         }
@@ -145,10 +161,15 @@ final class HotkeyMonitor: @unchecked Sendable {
 
     func stop() {
         if let localMonitor { NSEvent.removeMonitor(localMonitor) }
-        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        localMonitor = nil
+        removeTap()
+        lastTapAttempt = nil
+    }
+
+    private func removeTap() {
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
         if let port { CFMachPortInvalidate(port) }
-        localMonitor = nil; globalMonitor = nil; source = nil; port = nil
+        source = nil; port = nil
     }
 
     private func fire() {

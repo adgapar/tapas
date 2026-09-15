@@ -20,7 +20,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastHistoryURL: URL?
     private var previousApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
-    private var trustWasGranted = false
     private var noticeTask: Task<Void, Never>?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -219,8 +218,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if tick % 10 == 0 {
                     model.microphoneGranted = await mic.isAuthorized
                     model.accessibilityTrusted = AXIsProcessTrusted()
-                    if model.accessibilityTrusted && !trustWasGranted { hotkey.noteTrustMayHaveChanged() }
-                    trustWasGranted = model.accessibilityTrusted
+                    if model.accessibilityTrusted { hotkey.startTapIfTrusted() }
                     model.shortcutRunning = hotkey.tapRunning
                     if model.warming { model.progress = await catalog.downloadFraction }
                 }
@@ -234,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !model.snapshot.phase.isActive else { return }
         model.settings.hotkey = value
         hotkey.hotkey = value
+        hotkey.noteTrustMayHaveChanged()
         hotkey.recording = false
         model.recordingShortcut = false
         setup?.model.flow.hotkeyLabel = value.label
