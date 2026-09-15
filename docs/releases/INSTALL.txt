@@ -1,5 +1,5 @@
 Tapas — Small tools. Good company.
-0.1.0 Preview 2 · Dictado + Acta
+0.1.0 · Dictado + Acta
 
 Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
 
@@ -32,6 +32,6 @@ Recognition runs on this Mac. Model downloads and SDK usage/licensing reporting
 and update checks/downloads use the network. See PRIVACY.md and NOTICE.md for details.
 
 Acta's live-call accuracy, microphone attribution and device changes still need
-broader testing. This is a development preview, not the completed product launch.
+broader testing. Please report issues at the link below.
 
-Preview feedback: https://github.com/adgapar/tapas/issues
+Feedback: https://github.com/adgapar/tapas/issues

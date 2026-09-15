@@ -77,15 +77,28 @@ See Apple’s [custom notarization workflow](https://developer.apple.com/documen
 
 ## Build the installer
 
+Install the isolated packaging tool once (Python 3.9+):
+
+```sh
+python3 -m venv .build/dmg-tools
+.build/dmg-tools/bin/pip install dmgbuild==1.6.5
+```
+
+`Scripts/dmg-background.swift` draws the Retina background in the app’s palette.
+`Scripts/dmg-settings.py` places the real app and Applications shortcut in Finder.
+Its explicit file list includes only the app. Privacy and license notices remain
+inside the signed app; notarization reports stay outside the disk image.
+The build does not require Finder automation or screen-recording permission.
+
 ```sh
 TAPAS_SIGNING_IDENTITY='Developer ID Application: Your Name (TEAMID)' \
-TAPAS_NOTARY_PROFILE=tapas TAPAS_RELEASE_LABEL=0.1.0-preview.2 \
+TAPAS_NOTARY_PROFILE=tapas TAPAS_RELEASE_LABEL=0.1.0 \
   Scripts/package-dmg.sh
 ```
 
 This signs, notarizes and staples both the app and DMG, then verifies Gatekeeper
 acceptance and writes a SHA-256 checksum. To reuse a previously packaged app,
-set `TAPAS_PACKAGED_APP=dist/updater/Tapas.app`. Existing release files are never
+set `TAPAS_PACKAGED_APP=dist/developer-id/Tapas.app`. Existing release files are never
 overwritten. Signing and notarization do not publish a release.
 
 ## Automatic updates
@@ -102,16 +115,16 @@ do not generate a replacement key for each release.
 
 For every release:
 
-1. Increase `CFBundleVersion` in the app’s Info.plist (Preview 2 is build `2`).
+1. Increase `CFBundleVersion` in the app’s Info.plist (0.1.0 is build `3`).
 2. Build the signed/notarized DMG with a unique release label.
 3. Generate the signed update entry:
 
    ```sh
-   Scripts/prepare-update.sh dist/releases/Tapas-0.1.0-preview.2-arm64.dmg v0.1.0-preview.2
+   Scripts/prepare-update.sh dist/releases/Tapas-0.1.0-arm64.dmg v0.1.0
    ```
 
 4. Upload the DMG and checksum to that version’s GitHub release, and publish it.
-5. Upload the generated `dist/updates/v0.1.0-preview.2/appcast.xml` to the public
+5. Upload the generated `dist/updates/v0.1.0/appcast.xml` to the public
    `updates` release, replacing its previous appcast only after the DMG is live.
 6. Verify the public feed and download, then check from an older installed build.
 

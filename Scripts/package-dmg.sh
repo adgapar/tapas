@@ -3,6 +3,11 @@
 set -eu
 cd "$(dirname "$0")/.."
 
+DMGBUILD=${TAPAS_DMGBUILD:-.build/dmg-tools/bin/dmgbuild}
+if [ ! -x "$DMGBUILD" ]; then
+    echo "Install DMG build tooling: python3 -m venv .build/dmg-tools && .build/dmg-tools/bin/pip install dmgbuild==1.6.5" >&2
+    exit 1
+fi
 PACKAGED_APP=${TAPAS_PACKAGED_APP:-}
 if [ -n "$PACKAGED_APP" ]; then
     PLIST="$PACKAGED_APP/Contents/Info.plist"
@@ -12,10 +17,10 @@ fi
 VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$PLIST")
 ARCH=$(uname -m)
 if [ "$ARCH" != arm64 ]; then
-    echo "This preview is supported on Apple silicon Macs only." >&2
+    echo "Tapas is supported on Apple silicon Macs only." >&2
     exit 1
 fi
-RELEASE=${TAPAS_RELEASE_LABEL:-"$VERSION-acta-preview"}
+RELEASE=${TAPAS_RELEASE_LABEL:-"$VERSION"}
 case "$RELEASE" in *[!A-Za-z0-9._-]*|'') echo "Invalid release label." >&2; exit 1 ;; esac
 if [ -n "${TAPAS_NOTARY_PROFILE:-}" ] && [ -z "${TAPAS_SIGNING_IDENTITY:-}" ]; then
     echo "Set TAPAS_SIGNING_IDENTITY as well as TAPAS_NOTARY_PROFILE to sign the disk image." >&2
@@ -48,17 +53,12 @@ fi
 if [ "$NOTARIZED" = true ]; then
     spctl --assess --type execute --verbose=2 "$APP"
 fi
-ln -s /Applications "$STAGING/image/Applications"
-cp docs/releases/INSTALL.txt "$STAGING/image/Start here.txt"
-if [ "$NOTARIZED" != true ]; then
-    cat >> "$STAGING/image/Start here.txt" <<'NOTE'
-
-DEVELOPMENT BUILD: this copy has not been notarized by Apple. macOS may block
-launch. See https://support.apple.com/102445 for Apple's Open Anyway instructions.
-NOTE
-fi
-cp NOTICE.md PRIVACY.md "$STAGING/image/"
-hdiutil create -volname "Tapas $VERSION" -srcfolder "$STAGING/image" -fs HFS+ -format UDZO "$STAGING/Tapas.dmg"
+# Only the app is copied. Notarization reports stay in the staging directory.
+# Privacy and license notices are already inside Contents/Resources/Notices.
+swift Scripts/dmg-background.swift "$STAGING/background.tiff"
+"$DMGBUILD" -s Scripts/dmg-settings.py \
+    -D "app=$APP" -D "background=$STAGING/background.tiff" \
+    "Tapas" "$STAGING/Tapas.dmg"
 if [ -n "${TAPAS_SIGNING_IDENTITY:-}" ]; then
     codesign --force --sign "$TAPAS_SIGNING_IDENTITY" --timestamp "$STAGING/Tapas.dmg"
     codesign --verify --strict "$STAGING/Tapas.dmg"

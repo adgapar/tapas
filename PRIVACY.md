@@ -1,4 +1,4 @@
-# Tapas preview privacy
+# Tapas privacy
 
 Dictado and Acta process audio and transcripts on your Mac. Tapas does not
 upload recordings, dictated text or saved history for transcription or rewriting.
@@ -17,7 +17,7 @@ There is no Tapas account or cloud transcript store.
 - Dictado failed delivery retains text in memory for copy, export or retry. Unsaved
   recovery does not survive quitting or a crash.
 - Local diagnostic logs record permission/shortcut status, microphone format and
-  audio levels, not dictated words. The preview writes `/tmp/tapas.log` and uses
+  audio levels, not dictated words. Tapas writes `/tmp/tapas.log` and uses
   the macOS logging system.
 
 The destination application, clipboard managers and any services syncing your
@@ -68,7 +68,7 @@ it is not limited to one request per month. Audio and transcript content are not
 part of this reporting. Ordinary network requests also expose connection
 information, such as the IP address, to the receiving service.
 
-This preview does not add a separate Tapas analytics or crash-upload service.
+Tapas does not add a separate Tapas analytics or crash-upload service.
 Dependency details and attribution are in [NOTICE.md](NOTICE.md). This notice
 describes the current source implementation. The historical 0.1.0 Preview 1
 package contains Dictado only.
