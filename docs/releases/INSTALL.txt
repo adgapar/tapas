@@ -1,0 +1,38 @@
+Tapas — Small tools. Good company.
+0.1.0 Preview 1 · Dictado
+
+Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
+Acta is still in development. This preview includes working Dictado only.
+
+1. Quit an older copy of Tapas if it is running.
+2. Drag Tapas to Applications. Eject this disk image.
+3. Open Tapas from Applications and complete its short setup.
+4. Allow microphone access. Enable Accessibility for the installed Tapas to use
+   the global shortcut and automatic paste.
+5. Download the voice models during setup, then try a practice take.
+
+This preview is ad-hoc signed and has not been notarized by Apple. macOS may
+block the first launch. If you trust this download, try opening it, then use
+System Settings > Privacy & Security > Open Anyway.
+Apple's instructions: https://support.apple.com/102445
+
+For existing testers: grant permissions to the copy in Applications. If macOS
+still recognizes an older development copy, remove the old Accessibility entry,
+add the installed Tapas, then quit and reopen it. Your settings, models and
+history do not need to be deleted.
+
+Tapas lives in the menu bar. Open Your plate to change the shortcut or settings.
+Press Control–Option (or your chosen shortcut), speak, then press again to finish.
+Escape cancels. Hover over the small recording tab for Finish / Cancel controls.
+Live words are optional; the recording signal stays visible either way.
+
+Recognition runs on this Mac. Setup needs internet access to download models.
+The Desert Ant SDK also sends usage/licensing metadata, not audio or transcripts.
+See PRIVACY.md and NOTICE.md on this disk image for details.
+
+Optional redacted history: ~/Documents/tapas/dictado/
+Paste or save failures keep the text available for copy, export and retry.
+Recover unsaved text before quitting; recovery held in memory does not survive
+app termination. English filler sounds are removed from finished takes.
+
+Preview feedback: https://github.com/adgapar/tapas/issues

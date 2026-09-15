@@ -2,16 +2,36 @@
 
 Small tools. Good company.
 
+## The user's files are the product
+
+Tapas captures useful material into local, human-readable files that belong to
+the user. The app is a convenient way to capture and browse that material; it
+must not become the only way to access it.
+
+Transcripts should be legible to a person, a text editor, and any coding agent.
+Point Claude Code, Codex, Cursor, or another tool at the folder and ask for the
+analysis you need. Useful timestamps and language metadata belong beside the
+text in an open format. Reading the data must not require a Tapas service, API,
+special export operation, or proprietary database.
+
+The user decides which agents can access the files and where subsequent analysis
+runs. Local capture does not imply that a separately chosen cloud agent runs
+locally. Tapas should never silently send the user's transcripts to one.
+
+Future summaries, meeting insights, skills and MCP integrations are conveniences
+built on those files. Derived results should preserve the source transcript;
+they should not replace it or trap it inside the app.
+
 ## First release: two complete tools
 
-Tapas launches when **Dictado and Acta are both ready**. Dictado is the first implementation milestone, not a separate public release commitment.
+Tapas launches when **Dictado and Acta are both ready**. The first installable artifact, **0.1.0 Preview 1**, is a Dictado prerelease for testing. It does not replace the two-tool launch: Acta is visibly marked In dev, and preview notes identify what is unfinished.
 
 | Tool | The job | Presence |
 | --- | --- | --- |
 | Dictado | Speak a thought and put the words into the app in front of you. | El borde: a small recording signal, hidden while idle. |
 | Acta | Stay in a conversation and keep a useful local transcript. | A persistent meeting companion; the floating pintxo is the current visual exploration. |
 
-Both belong in the launch product menu. Development previews must identify unfinished functionality honestly; release builds should offer two functioning tools. Captura and Consulta remain uncommitted ideas. They have no launch cards, locked slots, release dates, or promised sequence.
+Both belong in the launch product menu. Development previews must identify unfinished functionality honestly; the full release should offer two functioning tools. Captura and Consulta remain uncommitted ideas. They have no launch cards, locked slots, release dates, or promised sequence.
 
 The first release needs dependable recording, clear start/stop state, appropriate permissions, retained results when delivery fails, and useful local files. Acta still needs its native implementation and its complete meeting experience. A finished visual concept does not make a tool ready to release.
 

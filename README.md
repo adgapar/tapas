@@ -4,9 +4,26 @@
 
 A plate of small, on-device AI tools for Mac. The first release will include Dictado and Acta; development starts with Dictado.
 
-Built so Claude, Codex, and Cursor can use what you capture. Files in `~/Documents/tapas/` first, then a skill/MCP. The Mac app is not another chat.
+Capture once. Keep readable files. Use any agent.
 
-Under the hood, a few [Desert Ant](https://desertant.com) models chained together. Nothing leaves the machine.
+Your transcripts belong to you, in plain Markdown under `~/Documents/tapas/`.
+Read them yourself or point Claude Code, Codex, Cursor, or another coding agent at
+the folder for analysis. No Tapas-specific API, export step, proprietary database,
+or subscription is needed to read those files. Tapas is the capture layer;
+you choose what happens to your data next.
+
+Future skills or MCP tools can make access more convenient, but the files remain
+the primary interface. Any analysis happens through tools you choose and give access to.
+
+Under the hood, a few [Desert Ant](https://desertant.com) models chained together. Audio and transcripts are processed locally. Model downloads and SDK usage/licensing reporting use the network; see [privacy details](PRIVACY.md).
+
+## Installable preview
+
+**0.1.0 Preview 1** is the first packaged Dictado preview, for Apple silicon Macs running macOS 15 or later. The release is being prepared while Developer ID signing and notarization are set up. Published builds will appear on [GitHub Releases](https://github.com/adgapar/tapas/releases).
+
+The current local DMG is ad-hoc signed and not notarized. macOS may require [Open Anyway](https://support.apple.com/102445) after the first attempted launch. Existing testers may need to re-add the installed copy to Accessibility. See [installation instructions](docs/releases/INSTALL.txt) and [draft release notes](docs/releases/0.1.0-preview.1.md).
+
+Acta remains in development. The full product launch still waits for Dictado and Acta together.
 
 ## The plate
 
@@ -32,6 +49,7 @@ Menu-bar app plus a testable `TapasCore` library. Xcode is not required.
 ```sh
 swift test
 Scripts/package-app.sh   # writes dist/Tapas.app
+Scripts/package-dmg.sh   # packages a separate app into dist/releases/*.dmg
 ```
 
 Open `dist/Tapas.app`, then finish **A first taste of Tapas**: microphone, optional Accessibility, voice-model preparation and a practice take. Accessibility enables the global shortcut and automatic paste. Without it, start from **Your plate** and copy finished words.
