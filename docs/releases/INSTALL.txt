@@ -1,5 +1,5 @@
 Tapas — Small tools. Good company.
-0.1.1 · Dictado + Acta
+0.1.5 · Dictado + Acta
 
 Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
 
@@ -18,8 +18,10 @@ Preferences. The menu-bar pintxo provides quick access too. Closing the window
 keeps Tapas running; choose Quit Tapas to stop it.
 Dictado: press Control–Option (or your shortcut) to start and finish a take.
 Acta: open it from Tools or accept its suggestion when another app uses the mic.
-Choose the meeting app and grant Screen & System Audio Recording access when
-asked. Start only when everyone is ready to be recorded. Pause stops both inputs.
+Grant microphone and Screen & System Audio Recording access when asked.
+Acta captures your microphone and computer audio without an app picker.
+Start only when everyone is ready to be recorded. Pause stops both inputs.
+Recording stays in the floating Pintxo, with pause/resume and finish below it.
 
 Tapas checks for updates and downloads them automatically. Updates install when
 you quit or choose to restart; active recordings and recovery delay restarting.
