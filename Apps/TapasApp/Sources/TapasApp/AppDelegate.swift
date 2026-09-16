@@ -71,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             self?.model.selectedTool = "Acta"
             self?.menu?.showHome()
         }
+        acta.onCaptureStarted = { [weak self] in self?.menu?.close() }
         acta.isPresented = { [weak self] in
             guard let self else { return false }
             return model.tab == "Tools" && model.selectedTool == "Acta" && menu?.isShown == true
@@ -82,7 +83,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 if app.processIdentifier != ProcessInfo.processInfo.processIdentifier { self?.previousApplication = app }
                 else {
                     self?.acta.refreshPermissions()
-                    if self?.acta.isWindowVisible == true { await self?.acta.loadApps() }
                 }
             }
         }

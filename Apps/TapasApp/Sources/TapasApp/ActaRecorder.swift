@@ -4,13 +4,8 @@ import CoreMedia
 import Foundation
 import TapasCore
 
-struct ActaAppSource: Identifiable, Hashable {
-    let id: Int32
-    let name: String
-}
-
 /// ScreenCaptureKit owns both inputs, so pause releases the microphone as well
-/// as app audio. Only audio outputs are registered; no screen images are retained.
+/// as computer audio. Only audio outputs are registered; no screen images are retained.
 final class ActaRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked Sendable {
     private let queue = DispatchQueue(label: "work.tapas.acta.audio")
     private var stream: SCStream?
@@ -28,21 +23,12 @@ final class ActaRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked
     private var lastSamples: [ActaSource: Double] = [:]
     var onFailure: (@Sendable (String) -> Void)?
 
-    @MainActor static func sources() async throws -> [ActaAppSource] {
+    @MainActor func start(session: ActaSession, offset: Double) async throws {
         let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
-        let ownPID = ProcessInfo.processInfo.processIdentifier
-        let visiblePIDs = Set(content.windows.compactMap { $0.owningApplication?.processID })
-        return content.applications.filter { $0.processID != ownPID && visiblePIDs.contains($0.processID) }
-            .map { ActaAppSource(id: $0.processID, name: $0.applicationName) }
-            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    @MainActor func start(app: ActaAppSource, session: ActaSession, offset: Double) async throws {
-        let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
-        guard let application = content.applications.first(where: { $0.processID == app.id }), let display = content.displays.first else {
-            throw CaptureError.sourceUnavailable
-        }
-        let filter = SCContentFilter(display: display, including: [application], exceptingWindows: [])
+        guard let display = content.displays.first else { throw CaptureError.sourceUnavailable }
+        // No app allowlist: capture computer audio, including apps launched mid-call.
+        // Only the audio and microphone outputs below are registered.
+        let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
         let config = SCStreamConfiguration()
         config.capturesAudio = true
         config.captureMicrophone = true
@@ -74,7 +60,7 @@ final class ActaRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked
         stream = nil
         let result: (Double, Task<Void, Never>?) = queue.sync {
             accepting = false
-            for source in [ActaSource.microphone, .app] {
+            for source in [ActaSource.microphone, .systemAudio] {
                 do {
                     let samples = try finishConversion(source: source)
                     if starts[source] == nil { starts[source] = ends[source] ?? offset }
@@ -98,18 +84,22 @@ final class ActaRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked
         queue.sync {
             let now = CMClockGetTime(CMClockGetHostTimeClock()).seconds
             func recent(_ source: ActaSource) -> Bool { now - (lastSamples[source] ?? 0) < 3 }
-            return (recent(.microphone) ? lastLevels[.microphone] ?? 0 : 0,
-                    recent(.app) ? lastLevels[.app] ?? 0 : 0, recent(.microphone), recent(.app))
+            // Keep connection health tolerant, but do not display stale speech
+            // for three seconds when an input stops delivering audio buffers.
+            func level(_ source: ActaSource) -> Double {
+                now - (lastSamples[source] ?? 0) < 0.25 ? lastLevels[source] ?? 0 : 0
+            }
+            return (level(.microphone), level(.systemAudio), recent(.microphone), recent(.systemAudio))
         }
     }
 
     func stream(_ stream: SCStream, didStopWithError error: Error) {
-        onFailure?("Audio capture was interrupted. Acta paused; check the selected app and audio permissions, then resume.")
+        onFailure?("Audio capture was interrupted. Acta paused; check microphone and computer audio permissions, then resume.")
     }
 
     func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
         guard accepting, sampleBuffer.isValid, type == .audio || type == .microphone else { return }
-        let source: ActaSource = type == .microphone ? .microphone : .app
+        let source: ActaSource = type == .microphone ? .microphone : .systemAudio
         do {
             let samples = try convert(sampleBuffer, source: source)
             guard !samples.isEmpty else { return }
@@ -193,7 +183,7 @@ final class ActaRecorder: NSObject, SCStreamOutput, SCStreamDelegate, @unchecked
         case sourceUnavailable, invalidAudio
         var errorDescription: String? {
             switch self {
-            case .sourceUnavailable: "The selected app is no longer available. Open it and refresh the app list."
+            case .sourceUnavailable: "Computer audio capture is unavailable. Check Screen & System Audio Recording access and try again."
             case .invalidAudio: "The audio input couldn’t be converted. Check your audio device."
             }
         }

@@ -7,8 +7,6 @@ import TapasCore
 @MainActor @Observable
 final class ActaModel {
     var snapshot = ActaSnapshot()
-    var apps: [ActaAppSource] = []
-    var selectedApp: Int32?
     var busy = false
     var ready = false
     var microphoneGranted = false
@@ -21,8 +19,16 @@ final class ActaModel {
     var appSeen = false
     var canResume = false
     var outputDirectory = TapasSettings().actaDirectory
-    var companionExpanded = false
+    var waveform = ActaWaveformHistory()
+    var companionNeedsDetails: Bool {
+        snapshot.phase == .saved || snapshot.phase == .recovery || error != nil || snapshot.message != nil
+    }
+    var companionSize: NSSize {
+        NSSize(width: companionNeedsDetails ? 340 : 180,
+               height: companionNeedsDetails ? (hasSession ? 400 : 180) : 176)
+    }
     var receiptVisible = false
+    var showingSavedReceipt = false
     var hasSession: Bool { snapshot.phase != .idle && snapshot.phase != .saved }
     var status: String {
         switch snapshot.phase {
@@ -44,14 +50,14 @@ final class ActaController: NSObject, NSWindowDelegate {
     var onShow: () -> Void = {}
     var isPresented: () -> Bool = { false }
     private var companion: NSPanel?
-    private var source: ActaAppSource?
-    private var suggestedPID: Int32?
+    private var canResumeCapture = false
     private var captureFailure: String?
     var permissionStatus: () -> (microphone: Bool, appAudio: Bool) = {
         (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized, CGPreflightScreenCaptureAccess())
     }
     var dictadoIsBusy: () -> Bool = { false }
     var onSaved: () -> Void = {}
+    var onCaptureStarted: () -> Void = {}
     var onSetup: () -> Void = {}
 
     func configure(pipeline: TranscriptionPipeline, root: URL) async {
@@ -73,30 +79,26 @@ final class ActaController: NSObject, NSWindowDelegate {
 
     var isWindowVisible: Bool { isPresented() }
 
-    /// Called only by the explicit Start Acta action in the microphone prompt.
-    /// Match the detected process again; never fall back to recording a different app.
+    /// The prompt identifies microphone use; accepting records microphone + computer audio.
     func startSuggested(_ app: MicrophoneApp) async {
         guard !model.busy else { return }
-        if model.snapshot.phase == .saved { await newMeeting() }
         refreshPermissions()
-        suggestedPID = app.pid
         guard !model.hasSession else { show(); return }
         guard model.ready, model.microphoneGranted, model.appAudioGranted else { show(); return }
-        await loadApps()
-        guard model.selectedApp == app.pid else {
-            model.error = "The detected app is no longer available. Choose a meeting app to continue."
-            onShow()
-            return
-        }
         await start()
     }
 
     func show() {
+        model.showingSavedReceipt = false
         model.receiptVisible = false
         refreshPermissions()
         onShow()
         companion?.orderOut(nil)
-        if model.appAudioGranted { Task { await loadApps() } }
+    }
+
+    func openSavedTranscript() {
+        guard let url = model.snapshot.savedURL else { return }
+        NSWorkspace.shared.open(url)
     }
 
     func refreshPermissions() {
@@ -108,32 +110,11 @@ final class ActaController: NSObject, NSWindowDelegate {
     func allowAppAudio() async {
         guard !model.busy, !model.hasSession else { return }
         model.appAudioGranted = CGRequestScreenCaptureAccess()
-        if model.appAudioGranted { await loadApps() }
-        else { model.error = "Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording. If macOS asks you to reopen Tapas, do so, then return to Acta." }
+        if !model.appAudioGranted { model.error = "Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording. If macOS asks you to reopen Tapas, do so, then return to Acta." }
     }
 
     func openAppAudioSettings() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
-    }
-
-    func loadApps() async {
-        guard !model.busy, !model.hasSession else { return }
-        refreshPermissions()
-        guard model.appAudioGranted else { return }
-        model.busy = true
-        model.error = nil
-        defer { model.busy = false }
-        do {
-            model.apps = try await ActaRecorder.sources()
-            if let suggestedPID, model.apps.contains(where: { $0.id == suggestedPID }) {
-                model.selectedApp = suggestedPID
-                self.suggestedPID = nil
-            }
-            if !model.apps.contains(where: { $0.id == model.selectedApp }) { model.selectedApp = nil }
-            if model.apps.isEmpty { model.error = "Open your meeting app, then refresh this list." }
-        } catch {
-            model.error = "App audio access is unavailable. Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording, then refresh. macOS may ask you to reopen Tapas."
-        }
     }
 
     func allowMicrophone() async {
@@ -144,21 +125,26 @@ final class ActaController: NSObject, NSWindowDelegate {
     func start() async {
         guard !model.busy, model.ready, let session, !model.hasSession else { return }
         guard !dictadoIsBusy() else { model.error = "Finish your Dictado take or setup before starting Acta."; return }
-        guard let app = model.apps.first(where: { $0.id == model.selectedApp }), model.microphoneGranted, model.appAudioGranted else { return }
+        guard model.microphoneGranted, model.appAudioGranted else { return }
+        if model.snapshot.phase == .saved {
+            await newMeeting()
+            guard model.snapshot.phase == .idle, model.ready else { return }
+        }
         model.busy = true
         model.error = nil
         captureFailure = nil
         model.elapsed = 0
         model.receiptVisible = false
-        model.companionExpanded = false
+        model.waveform = ActaWaveformHistory()
         defer { model.busy = false }
         do {
             await session.setOutputDirectory(model.outputDirectory)
-            try await session.start(appName: app.name)
-            source = app
-            try await recorder.start(app: app, session: session, offset: 0)
+            try await session.start(appName: "Computer audio")
+            canResumeCapture = true
+            try await recorder.start(session: session, offset: 0)
+            onCaptureStarted()
         } catch {
-            await session.pause(duration: model.elapsed, note: "Capture could not start. Check app audio and microphone access.")
+            await session.pause(duration: model.elapsed, note: "Capture could not start. Check computer audio and microphone access.")
             model.error = error.localizedDescription
         }
         await refresh()
@@ -175,7 +161,7 @@ final class ActaController: NSObject, NSWindowDelegate {
     }
 
     func resume() async {
-        guard !model.busy, let session, let source, model.canResume else { return }
+        guard !model.busy, let session, model.canResume else { return }
         guard !dictadoIsBusy() else { model.error = "Finish your Dictado take or setup before resuming Acta."; return }
         model.busy = true
         model.error = nil
@@ -184,9 +170,10 @@ final class ActaController: NSObject, NSWindowDelegate {
         do {
             try await session.resume()
             guard await session.snapshot().phase == .recording else { model.error = "Finish this meeting to recover its pending audio."; return }
-            try await recorder.start(app: source, session: session, offset: model.elapsed)
+            try await recorder.start(session: session, offset: model.elapsed)
+            onCaptureStarted()
         } catch {
-            await session.pause(duration: model.elapsed, note: "Capture could not resume. Check the selected app and audio access.")
+            await session.pause(duration: model.elapsed, note: "Capture could not resume. Check microphone and computer audio access.")
             model.error = error.localizedDescription
         }
         await refresh()
@@ -213,9 +200,9 @@ final class ActaController: NSObject, NSWindowDelegate {
         await session.finish()
         await refresh()
         if model.snapshot.phase == .saved {
+            model.showingSavedReceipt = true
             onSaved()
             model.receiptVisible = !isPresented()
-            model.companionExpanded = true
         }
         updateCompanion()
     }
@@ -228,23 +215,25 @@ final class ActaController: NSObject, NSWindowDelegate {
             model.elapsed = max(model.snapshot.document?.duration ?? 0, recorder.duration())
             let levels = recorder.levels()
             model.microphoneLevel = levels.microphone; model.appLevel = levels.app
+            model.waveform.append(max(levels.microphone, levels.app))
             model.microphoneSeen = levels.microphoneSeen; model.appSeen = levels.appSeen
             if !model.busy {
                 if let captureFailure { await pause(note: captureFailure) }
                 else if let message = model.snapshot.message { await pause(note: message) }
-                else if let source, NSRunningApplication(processIdentifier: source.id) == nil {
-                    await pause(note: "The selected app closed. Your recording is kept; finish this meeting to save it.")
-                }
+
             }
-        } else { model.elapsed = model.snapshot.document?.duration ?? 0 }
-        model.canResume = model.snapshot.phase == .paused && source != nil && NSRunningApplication(processIdentifier: source!.id) != nil
+        } else {
+            model.elapsed = model.snapshot.document?.duration ?? 0
+            model.waveform = ActaWaveformHistory()
+        }
+        model.canResume = model.snapshot.phase == .paused && canResumeCapture
         updateCompanion()
     }
 
     private func updateCompanion() {
         guard model.hasSession || model.receiptVisible, !isPresented() else { companion?.orderOut(nil); return }
         if companion == nil {
-            let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 320), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            let panel = NSPanel(contentRect: NSRect(origin: .zero, size: model.companionSize), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.isReleasedWhenClosed = false
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -254,9 +243,14 @@ final class ActaController: NSObject, NSWindowDelegate {
             panel.hasShadow = false
             panel.contentView = NSHostingView(rootView: ActaCompanion(model: model, controller: self))
             if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
-                panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - 360, y: screen.visibleFrame.minY + 24))
+                panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - model.companionSize.width - 20, y: screen.visibleFrame.minY + 24))
             }
             companion = panel
+        }
+        if let companion, companion.frame.size != model.companionSize {
+            let old = companion.frame
+            companion.setFrame(NSRect(x: old.maxX - model.companionSize.width, y: old.minY,
+                                      width: model.companionSize.width, height: model.companionSize.height), display: true)
         }
         companion?.orderFrontRegardless()
     }
@@ -276,7 +270,7 @@ final class ActaController: NSObject, NSWindowDelegate {
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         model.busy = true
         defer { model.busy = false }
-        do { try await session.discard(); model.error = nil; source = nil }
+        do { try await session.discard(); model.error = nil; canResumeCapture = false }
         catch { model.error = "The recovery files couldn’t be removed. Your meeting is still available." }
         await refresh()
     }
@@ -296,11 +290,14 @@ final class ActaController: NSObject, NSWindowDelegate {
 
     func newMeeting() async {
         guard !model.busy, model.snapshot.phase == .saved else { return }
+        model.busy = true
+        defer { model.busy = false }
+        model.showingSavedReceipt = false
         // Surface any older interrupted meeting before creating another one.
         do { try await session?.newMeeting() }
         catch { model.error = "An older recovery file couldn’t be read. Check ActaRecovery before starting another meeting."; model.ready = false }
         model.elapsed = 0
-        source = nil
+        canResumeCapture = false
         await refresh()
     }
 }

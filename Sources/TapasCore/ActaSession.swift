@@ -1,7 +1,17 @@
 import Foundation
 
 public enum ActaPhase: String, Sendable { case idle, recording, paused, finishing, saved, recovery }
-public enum ActaSource: String, Codable, Sendable { case microphone, app }
+public enum ActaSource: String, Codable, Sendable {
+    // Retain app for recovery journals made before computer-wide capture.
+    case microphone, app, systemAudio
+    public var label: String {
+        switch self {
+        case .microphone: "Microphone"
+        case .app: "App audio"
+        case .systemAudio: "Computer audio"
+        }
+    }
+}
 
 public struct ActaSegment: Codable, Equatable, Sendable {
     public var start: TimeInterval
@@ -42,7 +52,7 @@ public struct ActaDocument: Codable, Sendable {
 
         """
         for segment in segments.sorted(by: { $0.start < $1.start }) {
-            result += "\n[\(Self.timestamp(segment.start))] **\(segment.source == .microphone ? "Microphone" : "App audio")**: \(segment.text)\n"
+            result += "\n[\(Self.timestamp(segment.start))] **\(segment.source.label)**: \(segment.text)\n"
         }
         if segments.isEmpty { result += "\nNo speech was recognized.\n" }
         if !interruptions.isEmpty {

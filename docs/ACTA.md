@@ -23,43 +23,52 @@ copy states microphone use rather than asserting that a meeting was detected.
 
 Suggestions work before setup/models are ready, defer during Dictado or setup,
 and are suppressed while Acta is active or its controls are open. Accepting an
-invitation rechecks the detected app against capturable sources. When models and
-permissions are already ready, capture starts without taking focus from the call.
-Otherwise Acta opens its setup controls with the detected app remembered. Allowing
-a permission never starts recording; Start Acta remains an explicit action.
-No different app is selected as fallback. No recording begins from detection
-alone. Preferences can disable suggestions and stop polling. Read errors surface
+invitation starts microphone + computer audio capture when models and permissions
+are ready, without taking focus from the call. Otherwise Acta opens its setup
+controls. Allowing a permission never starts recording; Start Acta remains an
+explicit action. The detected app is context for the prompt, not a capture filter.
+No recording begins from detection alone. Preferences can disable suggestions and stop polling. Read errors surface
 in Preferences and do not count as a meeting ending. There are no calendar,
 meeting-service or MCP dependencies.
 
 ## Recording and ownership
 
-- Explicit microphone permission and app selection. A dedicated Allow meeting
-  audio action requests Screen & System Audio Recording access. App enumeration
-  is gated by a permission preflight, and background detection never requests it. Browser selection
-  can include other tabs. No screen output is registered or persisted.
-- A ScreenCaptureKit stream captures the selected app and microphone separately.
+- Explicit microphone and computer audio permission. Allow computer audio requests
+  Screen & System Audio Recording access; background detection never requests it.
+  There is no app picker. Computer audio includes other apps and notifications,
+  excluding Tapas’s own audio. No screen output is registered or persisted.
+- A ScreenCaptureKit stream captures computer audio and microphone separately.
   Native PCM formats are converted to 16 kHz mono per source. Five-second chunks
   keep audio memory bounded; recognition uses the existing local Voz/Ear pipeline.
 - The shared home shows elapsed recorded time, input meters, transcript preview
   and Pause/Resume/Finish. All tools returns home without stopping capture. Leaving
-  Acta reveals a compact Pintxo; click it for controls. Its four ingredients unfold
-  into bars driven by measured input levels, and gather on pause/save. Reduced
-  Motion retains a static Pintxo. Background saves show a dismissible receipt.
+  Acta closes the main window after capture starts and reveals the floating Pintxo.
+  Pause/resume, elapsed time and finish controls stay visible below it. The timer
+  opens details explicitly. Eight slim bars use recent measured loudness levels;
+  about 700 ms of quiet lets them morph back into the original four-piece Pintxo.
+  Pause also returns to the Pintxo, with a small pause badge. Reduced Motion skips
+  the morph animation. Recording has no duplicate status label or extra card.
+  Errors and recovery show details; background saves show a dismissible receipt.
 - Pause stops the capture stream, flushes each source’s partial chunk and waits
   for queued journal writes. Resume creates a new stream with an accumulated
   recorded-time offset. Recognition already queued may finish while paused.
 - Dictado reserves the microphone while it starts; Acta pauses before a take and
   stays paused afterward. Acta cannot start/resume during Dictado or setup.
-- Stream/conversion errors and termination of the selected app pause the meeting.
+- Stream/conversion errors pause the meeting. Closing a meeting app does not.
   Both inputs stop so users
   know the recording is incomplete. Waiting-for-audio indicators do not claim
-  that a silent app is disconnected. Reopen the app and start a new meeting if
-  its process has changed; resume can retry permissions/devices for the same app.
+  that quiet computer audio is disconnected. Resume can retry permissions/devices.
 
 The capture implementation follows Apple’s [ScreenCaptureKit content
 filters](https://developer.apple.com/documentation/screencapturekit/sccontentfilter)
 and the SDK’s audio/microphone stream outputs on macOS 15+.
+
+After saving, Acta shows a compact completion receipt with styled New meeting,
+View transcript and Export Markdown actions. Opening Acta again returns to the
+start screen; saved text is available through the explicit transcript action or
+Recent. Live transcript previews scroll in a bounded area below the controls.
+New computer audio segments use `systemAudio`; legacy `app` recovery segments
+remain readable with their original labels.
 
 ## Files and recovery
 

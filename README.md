@@ -27,7 +27,7 @@ personality to each tool. **Small tools. Good company.**
 | | Dictado | Acta |
 | --- | --- | --- |
 | Reach for it when… | You want to write by speaking. | You want to keep a meeting or conversation. |
-| It captures | Your voice. | Your microphone and a selected app’s audio. |
+| It captures | Your voice. | Your microphone and computer audio. |
 | You get | Text in the app you’re using, with optional local history. | A timestamped Markdown transcript. |
 
 ### Dictado · Speak your next sentence
@@ -48,7 +48,7 @@ copy of each take. If automatic paste is unavailable, copy your words from Tapas
 interview, or discussion, with your microphone and meeting audio in one transcript.
 
 1. Open Acta with **Control–Shift–M**, or from Tapas’s home.
-2. Choose the meeting app and start recording when everyone is ready.
+2. Start recording when everyone is ready. Acta captures your microphone and computer audio.
 3. Pause or resume from the floating Pintxo. Finish to save a timestamped Markdown file.
 
 Tapas can offer to open Acta when another app uses the microphone. Recording

@@ -61,12 +61,16 @@ public enum MicrophoneAppAttribution {
     /// Only resolve an actual owning app; never guess from the foreground app.
     /// A browser helper can have the host bundle ID plus a dotted suffix.
     public static func owner(pid: Int32, bundleID: String?, apps: [MicrophoneApp], ownPID: Int32, ownBundleID: String) -> MicrophoneApp? {
+        // Core Audio helpers can use different casing from their host app
+        // (Arc reports company.thebrowser.browser.helper for ...Browser).
+        let bundleID = bundleID?.lowercased()
+        let ownBundleID = ownBundleID.lowercased()
         guard pid != ownPID, bundleID != ownBundleID,
               bundleID?.hasPrefix(ownBundleID + ".") != true else { return nil }
-        let eligible = apps.filter { $0.pid != ownPID && $0.bundleID != ownBundleID }
+        let eligible = apps.filter { $0.pid != ownPID && $0.bundleID.lowercased() != ownBundleID }
         if let exact = eligible.first(where: { $0.pid == pid }) { return exact }
         guard let bundleID else { return nil }
-        return eligible.filter { bundleID == $0.bundleID || bundleID.hasPrefix($0.bundleID + ".") }
+        return eligible.filter { bundleID == $0.bundleID.lowercased() || bundleID.hasPrefix($0.bundleID.lowercased() + ".") }
             .sorted { $0.bundleID.count > $1.bundleID.count }.first
     }
 }

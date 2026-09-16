@@ -109,14 +109,12 @@ enum DesignRendering {
         acta.model.ready = true
         acta.model.microphoneGranted = true
         acta.model.appAudioGranted = true
-        acta.model.apps = [ActaAppSource(id: 42, name: "Meeting app")]
-        acta.model.selectedApp = 42
         try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-ready.png"))
-        var meeting = ActaDocument(appName: "Meeting app")
+        var meeting = ActaDocument(appName: "Computer audio")
         meeting.duration = 124
         meeting.segments = [
             ActaSegment(start: 8, source: .microphone, text: "Let’s leave a little room for the good ideas.", language: "en"),
-            ActaSegment(start: 14, source: .app, text: "We can share a first draft on Friday.", language: "en")
+            ActaSegment(start: 14, source: .systemAudio, text: "We can share a first draft on Friday.", language: "en")
         ]
         acta.model.snapshot.document = meeting
         acta.model.elapsed = 124
@@ -124,18 +122,36 @@ enum DesignRendering {
         acta.model.microphoneLevel = 0.32; acta.model.appLevel = 0.6
         for phase in [ActaPhase.recording, .paused, .recovery, .saved] {
             acta.model.snapshot.phase = phase
+            acta.model.showingSavedReceipt = phase == .saved
             acta.model.canResume = phase == .paused
             acta.model.snapshot.message = phase == .recovery ? "The file couldn’t be saved. Your meeting is retained. Retry or export your words." : nil
             try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-\(phase.rawValue).png"))
         }
+        acta.model.snapshot.savedURL = URL(fileURLWithPath: "/tmp/example-meeting.md")
+        acta.model.showingSavedReceipt = true
+        try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-complete.png"))
+        acta.model.showingSavedReceipt = false
+        try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 760), to: directory.appendingPathComponent("acta-reopened.png"))
         model.tab = "Tools"
         model.selectedTool = "Acta"
         try saveHosted(PlateView(model: model, actions: actions, actaController: acta), size: PlateWindowController.size, to: directory.appendingPathComponent("home-acta-saved.png"))
         model.selectedTool = nil
         let compact = NSSize(width: 390, height: 440)
         try saveHosted(PlateWindowContent(model: model, actions: actions, actaController: acta), size: compact, to: directory.appendingPathComponent("home-small-display.png"))
-        acta.model.snapshot.phase = .recording
-        try saveHosted(ActaCompanion(model: acta.model, controller: acta), size: NSSize(width: 340, height: 320), to: directory.appendingPathComponent("acta-companion.png"))
+        acta.model.snapshot.message = nil
+        for phase in [ActaPhase.recording, .paused, .finishing, .recovery, .saved] {
+            acta.model.snapshot.phase = phase
+            acta.model.showingSavedReceipt = phase == .saved
+            acta.model.canResume = phase == .paused
+            acta.model.snapshot.message = phase == .recovery ? "Audio capture stopped. Your meeting is kept; open Acta to recover it." : nil
+            acta.model.waveform = ActaWaveformHistory()
+            for level in [0.0, 0.02, 0.1, 0.35, 0.7, 0.4, 0.15, 0.05, 0.0, 0.0, 0.1, 0.3,
+                          0.6, 0.85, 0.5, 0.2, 0.05, 0.0, 0.15, 0.45, 0.7, 0.4, 0.2, 0.05] {
+                acta.model.waveform.append(level)
+            }
+            try saveHosted(ActaCompanion(model: acta.model, controller: acta), size: acta.model.companionSize,
+                           to: directory.appendingPathComponent("acta-companion-\(phase.rawValue).png"))
+        }
         let overlay = OverlayModel()
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.08, phase: .listening)
         for phase in [DictationPhase.starting, .listening, .finishing, .delivered] {

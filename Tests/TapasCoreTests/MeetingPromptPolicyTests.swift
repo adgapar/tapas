@@ -69,3 +69,13 @@ import Testing
     #expect(MicrophoneAppAttribution.owner(pid: 8, bundleID: "com.google.Chrome.helper", apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == chrome)
     #expect(MicrophoneAppAttribution.owner(pid: 2, bundleID: nil, apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == chrome)
 }
+
+@Test func microphoneAttributionResolvesArcHelperWithDifferentBundleIDCasing() {
+    let arc = MicrophoneApp(pid: 2, bundleID: "company.thebrowser.Browser", name: "Arc")
+    let apps = [arc]
+    #expect(MicrophoneAppAttribution.owner(pid: 8, bundleID: "company.thebrowser.browser.helper", apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == arc)
+    #expect(MicrophoneAppAttribution.owner(pid: 8, bundleID: "COMPANY.THEBROWSER.BROWSER", apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == arc)
+    #expect(MicrophoneAppAttribution.owner(pid: 8, bundleID: "company.thebrowser.browserOther.helper", apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == nil)
+    // Normalization must preserve the exclusion of our own audio activity.
+    #expect(MicrophoneAppAttribution.owner(pid: 8, bundleID: "WORK.TAPAS.TAPAS.helper", apps: apps, ownPID: 1, ownBundleID: "work.tapas.Tapas") == nil)
+}

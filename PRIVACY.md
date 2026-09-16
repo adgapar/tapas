@@ -37,9 +37,9 @@ checks. No calendar, meeting-service account, integration or MCP is needed.
 
 ## Acta meeting files and recovery
 
-Acta records your microphone and the audio of the app you explicitly select.
-Selecting a browser can include audio from other tabs in that browser. The app
-uses macOS ScreenCaptureKit permission for this; it does not retain screen images.
+Acta records your microphone and computer audio, excluding Tapas’s own audio.
+Computer audio can include other apps, browser tabs, music and notifications.
+The app uses macOS ScreenCaptureKit permission for this; it does not retain screen images.
 Pause stops both audio inputs. Start only when participants are ready to be recorded.
 
 Acta saves full, unredacted Markdown transcripts under `~/Documents/tapas/acta/`,

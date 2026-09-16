@@ -94,6 +94,28 @@ private struct ActaFixture {
     #expect(result.document?.duration == 7)
 }
 
+@Test func computerAudioSurvivesRecoveryAndKeepsLegacyAppLabels() async throws {
+    let fixture = ActaFixture(); defer { fixture.cleanup() }
+    let first = fixture.makeSession()
+    try await first.start(appName: "Computer audio")
+    await fixture.recognizer.setFailing(true)
+    await first.ingest(samples: Array(repeating: 0.3, count: 16_000), source: .systemAudio, start: 6)
+    await first.pause(duration: 7)
+    await first.finish()
+    #expect(await first.snapshot().pendingChunks == 1)
+    let restored = fixture.makeSession()
+    try await restored.recover()
+    await fixture.recognizer.setFailing(false)
+    await restored.finish()
+    let result = await restored.snapshot()
+    #expect(result.phase == .saved)
+    #expect(result.document?.segments.first?.source == .systemAudio)
+    let text = try String(contentsOf: #require(result.savedURL), encoding: .utf8)
+    #expect(text.contains("[00:00:06] **Computer audio**"))
+    let legacy = try JSONDecoder().decode(ActaSource.self, from: Data("\"app\"".utf8))
+    #expect(legacy.label == "App audio")
+}
+
 @Test func actaRestoresRecognizedTextAfterFailedSave() async throws {
     let fixture = ActaFixture(); defer { fixture.cleanup() }
     let first = fixture.makeSession()

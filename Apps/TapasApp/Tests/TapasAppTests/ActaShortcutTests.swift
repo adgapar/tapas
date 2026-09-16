@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 import Testing
 import TapasCore
 @testable import TapasApp
@@ -34,4 +35,27 @@ import TapasCore
     #expect(!controller.model.busy)
     #expect(!controller.model.microphoneGranted)
     #expect(!controller.model.appAudioGranted)
+}
+
+@MainActor @Test func reopeningSavedActaPreparesNextMeetingWithoutLosingSavedTranscript() {
+    let controller = ActaController()
+    controller.permissionStatus = { (false, false) }
+    var meeting = ActaDocument(appName: "Arc")
+    meeting.duration = 1_200
+    meeting.segments = (0..<240).map {
+        ActaSegment(start: Double($0 * 5), source: .app, text: "Meeting segment \($0)", language: "en")
+    }
+    controller.model.snapshot.document = meeting
+    controller.model.snapshot.savedURL = URL(fileURLWithPath: "/tmp/saved-meeting.md")
+    controller.model.snapshot.phase = .saved
+    controller.model.showingSavedReceipt = true
+    var opened = false
+    controller.onShow = { opened = true }
+    controller.show()
+    #expect(opened)
+    #expect(!controller.model.showingSavedReceipt)
+    #expect(controller.model.snapshot.phase == .saved)
+    #expect(controller.model.snapshot.document?.segments.count == 240)
+    #expect(controller.model.snapshot.savedURL?.lastPathComponent == "saved-meeting.md")
+    #expect(!controller.model.hasSession)
 }

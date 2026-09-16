@@ -23,11 +23,11 @@ private func audioSample(rate: Double, channels: AVAudioChannelCount, integer: B
     return result
 }
 
-@Test func actaConvertsAppAudioToMono16k() throws {
+@Test func actaConvertsComputerAudioToMono16k() throws {
     let recorder = ActaRecorder()
     var samples: [Float] = []
-    for _ in 0..<10 { samples += try recorder.convert(audioSample(rate: 48_000, channels: 2), source: .app) }
-    samples += try recorder.finishConversion(source: .app)
+    for _ in 0..<10 { samples += try recorder.convert(audioSample(rate: 48_000, channels: 2), source: .systemAudio) }
+    samples += try recorder.finishConversion(source: .systemAudio)
     #expect(abs(samples.count - 16_000) <= 1)
     #expect(samples.allSatisfy { $0.isFinite })
     #expect(abs(samples.suffix(500).reduce(0, +) / 500 - 0.25) < 0.01)

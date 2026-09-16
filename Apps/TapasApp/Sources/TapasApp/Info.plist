@@ -25,7 +25,7 @@
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>NSScreenCaptureUsageDescription</key>
-	<string>Acta captures audio from your selected meeting app to transcribe conversations on this Mac. Screen images are not saved.</string>
+	<string>Acta captures your microphone and computer audio to transcribe conversations on this Mac. Screen images are not saved.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Tapas uses the microphone for dictation and meeting transcripts. Audio stays on this Mac.</string>
 	<key>SUFeedURL</key>
