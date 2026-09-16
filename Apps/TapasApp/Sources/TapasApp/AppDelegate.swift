@@ -560,8 +560,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             switch action {
             case "install":
                 try LibraryLocation.update(root: model.settings.transcriptDirectory)
+                try AssistantWorkflows.prepare(root: model.settings.transcriptDirectory)
                 _ = try skill.install(for: model.assistant.host)
                 model.assistant.message = "Skill installed. Start a new assistant session to load it."
+            case "templates":
+                let folder = try AssistantWorkflows.prepare(root: model.settings.transcriptDirectory)
+                guard NSWorkspace.shared.open(folder) else { throw CocoaError(.fileReadUnknown) }
+                model.assistant.message = "Edit or add Markdown templates here. Reusable instructions live in the neighboring playbooks folder."
             case "remove":
                 try skill.remove(for: model.assistant.host)
                 model.assistant.message = "Skill removed. Recordings are unchanged."

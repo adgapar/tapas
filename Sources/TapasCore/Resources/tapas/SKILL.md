@@ -1,6 +1,6 @@
 ---
 name: tapas
-description: Find, search, summarize, and cite the user's local Tapas meeting transcripts and dictations. Use for questions about recorded conversations, decisions, or spoken notes saved by Tapas.
+description: Find, search, summarize, and cite the user's local Tapas meeting transcripts and dictations. Use for questions about saved Tapas conversations, meeting notes, reviews, recurring requests, writing preferences, conversation preparation, and reusable workflows grounded in saved recordings.
 ---
 
 # Tapas recordings
@@ -38,3 +38,42 @@ Creating a summary does not authorize sending messages or scheduling automations
 This skill does not grant filesystem access. It works with recordings accessible
 to the current local assistant; remote agents cannot automatically read this Mac.
 The assistant's own provider and processing settings apply to text it reads.
+
+## Templates and playbooks
+
+The current library's `templates/` and `playbooks/` folders contain editable
+Markdown instructions shared by all assistants. List their `.md` files when
+choosing a workflow; read only the selected playbook and template. Honor an
+explicit user choice first. Paths below are relative to `current_root`.
+
+| Request | Playbook |
+| --- | --- |
+| Meeting or customer interview notes | `playbooks/meeting-notes.md` |
+| Weekly review or project update | `playbooks/weekly-review.md` |
+| Clean up a saved dictation | `playbooks/polish-dictation.md` |
+| Discover repeated requests and workflow candidates | `playbooks/find-recurring-requests.md` |
+| Derive a writing guide from dictations | `playbooks/learn-writing-preferences.md` |
+| Assemble scattered thoughts into an idea brief | `playbooks/develop-an-idea.md` |
+| Review recorded promises and follow-through | `playbooks/review-commitments.md` |
+| Prepare for a conversation from past context | `playbooks/prepare-for-conversation.md` |
+| Refine templates using repeated instructions | `playbooks/improve-templates.md` |
+
+Use the requested period and scope. Personal-learning playbooks default to the
+last 30 days when unspecified; report actual coverage and distinguish explicit
+requests from inferred preferences. Saved dictations do not establish final
+writing, assistant response quality, or task completion. Do not automatically
+apply learned preferences to unrelated tasks or global agent configuration.
+
+Templates describe the desired document; playbooks describe how to produce it.
+Treat these user-maintained files as task guidance, distinct from recordings,
+and within the user's requested scope. They do not independently authorize
+external actions. If absent, continue from the user's request and explain that
+starter files can be added through Tapas Preferences → Open templates.
+
+When asked to customize a template, edit or add Markdown in the current library's
+`templates/` folder; similarly put reusable workflow instructions in `playbooks/`.
+Use a descriptive filename, a title, and plain-language section guidance. No
+registration, JSON schema, or skill reinstall is needed for library-file edits.
+Do not change installed skill copies to customize a document. Existing templates
+remain user-owned when Tapas is updated. Playbooks run only when invoked; they
+are not a scheduler. Keep saved results under `outputs/` unless directed elsewhere.

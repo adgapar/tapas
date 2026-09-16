@@ -14,6 +14,67 @@ filesystem access or connect a cloud assistant to your Mac. Your assistant may
 process the text it reads through its own provider. Removing the skill does not
 remove recordings.
 
+## Templates and playbooks
+
+Installing or updating the skill from Tapas (including the setup command) adds
+starter Markdown files to `templates/` and `playbooks/` in your current transcript
+folder. **Preferences → Use with your AI assistant → Open templates** also adds
+missing starters and opens the templates folder in Finder. Existing files are
+never overwritten, including customized starters. Deleted starters are restored
+when you next install/update the skill or use Open templates.
+
+Templates describe the desired document. Playbooks explain how to produce it.
+Both are ordinary Markdown: use a title, headings, and brief instructions for each
+section. No JSON schema, registration, or required frontmatter is involved. Add
+or edit a `.md` file yourself, or ask your assistant to customize it. Your assistant
+reads the selected files when running a task; library edits need no skill reinstall.
+Update an older installed skill once to teach it this workflow.
+
+Starters include meeting notes, customer interviews, and project updates, with
+playbooks for meeting notes, weekly reviews, polishing saved dictation, and
+learning useful workflows from your history. Try:
+
+- “Use Tapas to make notes from yesterday's meeting with the meeting-notes template.”
+- “Use my customer-interview template for this recording.”
+- “Create a retrospective template in my Tapas templates folder.”
+- “Review this week's recordings and save a project update.”
+
+The default Acta meeting-notes template puts **Action items** directly after the
+summary, grouped into **You** and **Others**. Other participants can remain a
+single group. Agreed tasks with uncertain ownership appear under **Unclear owner**.
+Each item has a source citation and a deadline when one was stated. Capture-source
+labels alone do not establish ownership. For long meetings, the playbook reviews
+the full recording and reconciles repeated, changed, or cancelled actions.
+
+Additional playbooks work across recordings:
+
+| Ask your assistant | Result |
+| --- | --- |
+| “Find my recurring requests in last month's Dictado history.” | Evidence-backed candidates for templates, skills, and routines |
+| “Learn my writing preferences from my dictations.” | An editable guide separating explicit preferences from tentative patterns |
+| “Develop my onboarding idea from my saved recordings.” | A sourced brief with alternatives and unanswered questions |
+| “Review my commitments from the last month.” | Tasks, supported owners, deadlines, and known or unknown status |
+| “Prepare me for a follow-up conversation about onboarding.” | Relevant history, decisions, open questions, and a suggested agenda |
+| “Suggest improvements to my templates from repeated dictation instructions.” | Proposed changes with supporting examples; edits only when requested |
+
+Personal-learning playbooks use the last 30 days unless you specify a period and
+report how much saved history they reviewed. Dictado history must have been enabled
+to supply saved takes; they cannot recover unsaved dictations or redacted values.
+Spoken input does not show final writing, whether an assistant helped, or whether
+a task was completed. Findings remain suggestions unless you ask to apply them.
+You can also explicitly ask for a proposed template or playbook to be created in
+your library. A proposed routine does not enable background execution.
+
+Results appear in the assistant conversation unless you ask to save them. Saved
+results default to separate Markdown files under `outputs/`, with source citations.
+Original recordings are preserved. All local assistants use the current library's
+same templates. Changing the transcript folder does not move custom templates;
+copy them to the new folder if you want to keep using them there.
+
+This release supplies instructions and starter files. Tapas does not launch an
+agent, schedule playbooks, or automatically generate notes. Removing the skill
+leaves your templates, playbooks, and outputs in place.
+
 ## Files and discovery
 
 New Dictado and Acta files contain shared factual YAML metadata. Dictado keeps

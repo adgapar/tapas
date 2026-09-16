@@ -308,6 +308,9 @@ struct PlateView: View {
                 Text("Find and cite recordings in your transcript folder. Older folder locations remain discoverable.")
                     .font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 AssistantSetupView(model: model.assistant, onAction: actions.assistantAction)
+                Button("Open templates") { actions.assistantAction("templates") }
+                Text("Make meeting notes your own. Edit or add Markdown templates; your assistant reads them when you ask. Existing files are preserved.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 HStack {
                     Button("Remove") { actions.assistantAction("remove") }
                         .disabled(!["Installed", "Update available"].contains(model.assistant.status))

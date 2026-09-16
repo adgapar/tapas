@@ -189,3 +189,27 @@ private struct LibraryFixture {
     try installer.remove(for: second)
     #expect(installer.status(for: second) == "Not installed")
 }
+
+@Test func workflowStartersPreserveCustomizationsAcrossPreparation() throws {
+    let fixture = LibraryFixture(); defer { fixture.cleanup() }
+    let templates = try AssistantWorkflows.prepare(root: fixture.root)
+    #expect(templates == fixture.root.appendingPathComponent("templates", isDirectory: true))
+    #expect(!(try fixture.read("templates/meeting-notes.md")).isEmpty)
+    #expect(!(try fixture.read("playbooks/meeting-notes.md")).isEmpty)
+    try fixture.write("templates/meeting-notes.md", "My own format")
+    try fixture.write("templates/team-retro.md", "Custom retrospective")
+    try fixture.write("playbooks/weekly-review.md", "My own workflow")
+    try AssistantWorkflows.prepare(root: fixture.root)
+    #expect(try fixture.read("templates/meeting-notes.md") == "My own format")
+    #expect(try fixture.read("templates/team-retro.md") == "Custom retrospective")
+    #expect(try fixture.read("playbooks/weekly-review.md") == "My own workflow")
+}
+
+@Test func workflowPreparationRejectsLinkedFoldersWithoutWritingOutsideLibrary() throws {
+    let fixture = LibraryFixture(); defer { fixture.cleanup() }
+    let outside = LibraryFixture(); defer { outside.cleanup() }
+    try fixture.prepare(); try outside.prepare()
+    try FileManager.default.createSymbolicLink(at: fixture.root.appendingPathComponent("templates"), withDestinationURL: outside.root)
+    #expect(throws: LibraryFileError.self) { try AssistantWorkflows.prepare(root: fixture.root) }
+    #expect(!FileManager.default.fileExists(atPath: outside.root.appendingPathComponent("meeting-notes.md").path))
+}

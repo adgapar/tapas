@@ -18,6 +18,9 @@ enum Tapas {
                 guard FileManager.default.fileExists(atPath: LibraryLocation.file().path) else {
                     fputs("Open Tapas once to publish your transcript folder, then retry.\n", stderr); exit(1)
                 }
+                let location = try JSONDecoder().decode(LibraryLocation.self, from: Data(contentsOf: LibraryLocation.file()))
+                guard location.schema_version == 1 else { throw CocoaError(.fileReadCorruptFile) }
+                try AssistantWorkflows.prepare(root: URL(fileURLWithPath: location.current_root, isDirectory: true))
                 let directory = try AssistantSkill().install(for: host)
                 print("Installed at \(directory.path). Start a new assistant session.")
             } catch { fputs("Skill installation failed: \(error.localizedDescription)\n", stderr); exit(1) }
