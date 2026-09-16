@@ -47,7 +47,7 @@ private struct ActaFixture {
     let text = try String(contentsOf: #require(state.savedURL), encoding: .utf8)
     #expect(text.contains("[00:00:00] **Microphone**"))
     #expect(text.contains("[00:00:02] **App audio**"))
-    #expect(text.contains("languages: [en]"))
+    #expect(text.contains("languages: [\"en\"]"))
     #expect(text.contains("Paused for Dictado."))
     #expect(try FileManager.default.contentsOfDirectory(atPath: fixture.recovery.path).isEmpty)
     #expect(try HistoryLibrary.read(directory: fixture.output).count == 1)

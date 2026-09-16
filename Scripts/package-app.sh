@@ -7,6 +7,8 @@ APP="$OUTPUT_DIR/Tapas.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Apps/TapasApp/.build/release/Tapas "$APP/Contents/MacOS/Tapas"
+# SwiftPM locates this in the main app resource directory.
+ditto Apps/TapasApp/.build/release/Tapas_TapasCore.bundle "$APP/Contents/Resources/Tapas_TapasCore.bundle"
 SPARKLE=Apps/TapasApp/.build/artifacts/sparkle/Sparkle
 mkdir -p "$APP/Contents/Frameworks"
 ditto "$SPARKLE/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"

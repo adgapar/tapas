@@ -64,7 +64,9 @@ location, with their own subfolders. Open files in your editor, search them, or
 use them with your favorite AI tools and scripts. You choose what gets access.
 
 **Your files are the interface.** Tapas handles capture; you choose what to do
-with the result.
+with the result. Saved recordings include factual metadata and searchable Markdown
+indexes. In **Preferences → Use with your AI assistant**, install a local skill
+for finding recordings and citing their sources. [Assistant setup](docs/ASSISTANTS.md).
 
 No Tapas account is required. Your files remain yours to read and use outside
 the app.

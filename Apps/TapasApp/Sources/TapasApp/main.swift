@@ -1,4 +1,5 @@
 import AppKit
+import TapasCore
 
 @main
 enum Tapas {
@@ -7,6 +8,21 @@ enum Tapas {
     static func main() {
         let app = NSApplication.shared
         let arguments = CommandLine.arguments
+        if arguments.count >= 2, arguments[1] == "--install-skill" {
+            guard arguments.count == 3, let host = AssistantHost(rawValue: arguments[2]) else {
+                fputs("Usage: Tapas --install-skill claude|codex|cursor\n", stderr); exit(2)
+            }
+            do {
+                // Use the last location published by the GUI; command-line defaults
+                // can have a different bundle domain from the running app.
+                guard FileManager.default.fileExists(atPath: LibraryLocation.file().path) else {
+                    fputs("Open Tapas once to publish your transcript folder, then retry.\n", stderr); exit(1)
+                }
+                let directory = try AssistantSkill().install(for: host)
+                print("Installed at \(directory.path). Start a new assistant session.")
+            } catch { fputs("Skill installation failed: \(error.localizedDescription)\n", stderr); exit(1) }
+            return
+        }
         if arguments.count == 3, arguments[1] == "--export-icon" {
             do { try DesignRendering.exportIcon(to: URL(fileURLWithPath: arguments[2], isDirectory: true)) }
             catch { fputs("Icon export failed: \(error)\n", stderr); exit(1) }

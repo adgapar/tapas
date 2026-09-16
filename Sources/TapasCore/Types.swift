@@ -56,12 +56,14 @@ public enum DictationError: Equatable, Sendable {
 }
 
 public struct HistoryRecord: Sendable, Equatable {
+    public var id: UUID
     public var startedAt: Date
     public var language: String?
     public var duration: TimeInterval
     public var pastedText: String
 
-    public init(startedAt: Date, language: String?, duration: TimeInterval, pastedText: String) {
+    public init(startedAt: Date, language: String?, duration: TimeInterval, pastedText: String, id: UUID = UUID()) {
+        self.id = id
         self.startedAt = startedAt
         self.language = language
         self.duration = duration

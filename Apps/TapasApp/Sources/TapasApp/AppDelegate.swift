@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private var prepareTask: Task<Void, Error>?
     private var refreshTask: Task<Void, Never>?
     private var historyTask: Task<Void, Never>?
+    private var indexTask: Task<Void, Never>?
+    private var pendingIndexRoots: Set<URL> = []
     private var lastHistoryURL: URL?
     private var previousApplication: NSRunningApplication?
     private var activationObserver: NSObjectProtocol?
@@ -55,7 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             guard let self else { return true }
             return dictadoRequested || model.snapshot.phase.isActive || setup?.window?.isVisible == true
         }
-        acta.onSaved = { [weak self] in self?.reloadHistory() }
+        acta.onSaved = { [weak self] in
+            guard let self else { return }
+            if let url = acta.model.snapshot.savedURL { queueIndex(root: url.deletingLastPathComponent().deletingLastPathComponent()) }
+            reloadHistory()
+        }
         acta.onSetup = { [weak self] in self?.presentSetup() }
         let actions = makeActions()
         overlay.configure(actions: actions)
@@ -219,7 +225,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             resetFolder: { [weak self] in self?.setTranscriptFolder(TapasSettings().transcriptDirectory) },
             checkForUpdates: { [weak self] in self?.menu?.close(); self?.updater.check() },
             setUpdateChecks: { [weak self] in self?.updater.setAutomaticChecks($0) },
-            setUpdateDownloads: { [weak self] in self?.updater.setAutomaticDownloads($0) }
+            setUpdateDownloads: { [weak self] in self?.updater.setAutomaticDownloads($0) },
+            assistantAction: { [weak self] in self?.assistantAction($0) }
         )
     }
 
@@ -390,6 +397,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 overlay.model.showLiveWords = model.settings.overlayEnabled
                 overlay.apply(snap, suppressed: setup?.window?.isVisible == true || menu?.isShown == true)
                 if snap.historyURL != lastHistoryURL {
+                    if let url = snap.historyURL { queueIndex(root: url.deletingLastPathComponent().deletingLastPathComponent()) }
                     lastHistoryURL = snap.historyURL
                     reloadHistory()
                 }
@@ -400,6 +408,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                     model.shortcutRunning = hotkey.tapRunning
                     if model.warming { model.progress = await catalog.downloadFraction }
                 }
+                if tick > 0 && tick % 600 == 0 { reconcileLibrary() }
                 tick += 1
                 try? await Task.sleep(for: .milliseconds(100))
             }
@@ -485,6 +494,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func savePreferences() {
         let defaults = UserDefaults.standard
         defaults.set(model.settings.transcriptDirectory.path, forKey: "transcriptDirectory")
+        reconcileLibrary()
         if let data = try? JSONEncoder().encode(model.settings.actaHotkey) { defaults.set(data, forKey: "actaHotkey") }
         defaults.set(model.settings.meetingPromptsEnabled, forKey: "meetingPromptsEnabled")
         meetingPrompt.enabled = model.settings.meetingPromptsEnabled
@@ -498,6 +508,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     private func reloadHistory() {
+        reconcileLibrary()
         historyTask?.cancel()
         let directory = model.settings.historyDirectory
         historyTask = Task { [weak self] in
@@ -512,6 +523,57 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 self?.model.libraryError = nil
             } catch { self?.model.libraryError = "History couldn’t be read. Check your transcript folder in Preferences." }
         }
+    }
+
+    private func reconcileLibrary() {
+        do {
+            let location = try LibraryLocation.update(root: model.settings.transcriptDirectory)
+            for path in [location.current_root] + location.previous_roots {
+                queueIndex(root: URL(fileURLWithPath: path, isDirectory: true))
+            }
+        } catch { model.assistantMessage = "Library discovery couldn’t be updated: " + error.localizedDescription }
+        model.assistantStatus = AssistantSkill().status(for: model.assistantHost)
+    }
+
+    private func queueIndex(root: URL) {
+        pendingIndexRoots.insert(root)
+        guard indexTask == nil else { return }
+        indexTask = Task { [weak self] in
+            guard let self else { return }
+            var warnings: [String] = []
+            var count = 0
+            while let next = pendingIndexRoots.sorted(by: { $0.path < $1.path }).first {
+                pendingIndexRoots.remove(next)
+                let report = await TranscriptIndex.shared.rebuild(root: next)
+                warnings += report.warnings
+                count += report.recordings
+            }
+            model.indexMessage = warnings.isEmpty ? "Indexes ready · \(count) recordings." : "Recordings are safe. " + warnings.joined(separator: "\n")
+            indexTask = nil
+        }
+    }
+
+    private func assistantAction(_ action: String) {
+        do {
+            let skill = AssistantSkill()
+            switch action {
+            case "install":
+                try LibraryLocation.update(root: model.settings.transcriptDirectory)
+                let directory = try skill.install(for: model.assistantHost)
+                model.assistantMessage = "Installed at \(directory.path). Start a new assistant session to load it."
+            case "remove":
+                try skill.remove(for: model.assistantHost)
+                model.assistantMessage = "Skill removed. Recordings are unchanged."
+            case "copy":
+                if let executable = Bundle.main.executableURL {
+                    copy(AssistantSkill.setupCommand(executable: executable, host: model.assistantHost))
+                    model.assistantMessage = "Setup command copied. Run it locally to install the skill."
+                }
+            case "rebuild": reconcileLibrary()
+            default: break
+            }
+        } catch { model.assistantMessage = error.localizedDescription }
+        model.assistantStatus = AssistantSkill().status(for: model.assistantHost)
     }
 
     private func revealHistory() {
@@ -589,7 +651,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        refreshTask?.cancel(); historyTask?.cancel(); noticeTask?.cancel()
+        refreshTask?.cancel(); historyTask?.cancel(); indexTask?.cancel(); noticeTask?.cancel()
         hotkey.stop()
         meetingPrompt.stop()
         if let activationObserver { NSWorkspace.shared.notificationCenter.removeObserver(activationObserver) }

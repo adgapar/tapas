@@ -15,7 +15,7 @@ let package = Package(
         .library(name: "TapasCore", targets: ["TapasCore"]),
     ],
     targets: [
-        .target(name: "TapasCore"),
+        .target(name: "TapasCore", resources: [.copy("Resources/tapas")]),
         .testTarget(
             name: "TapasCoreTests",
             dependencies: ["TapasCore"],

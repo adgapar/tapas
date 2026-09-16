@@ -36,14 +36,10 @@ public struct ActaDocument: Codable, Sendable {
     public init(appName: String) { self.appName = appName }
 
     public var markdown: String {
-        let languages = Set(segments.compactMap(\.language)).sorted().joined(separator: ", ")
+        let languages = Set(segments.compactMap(\.language)).sorted()
         let source = appName.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "\r", with: " ")
         var result = """
-        ---
-        tool: acta
-        time: \(ISO8601DateFormatter().string(from: startedAt))
-        duration: \(duration)
-        languages: [\(languages)]
+        \(TranscriptMetadata.frontmatter(id: id, tool: "acta", startedAt: startedAt, duration: duration, languages: languages, redaction: "none", sources: Array(Set(segments.map { $0.source.rawValue }))))
         ---
 
         # Acta · \(source)

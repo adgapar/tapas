@@ -16,13 +16,10 @@ public struct HistoryWriter: Sendable {
         let name = Self.filename(for: record.startedAt, calendar: calendar)
         var url = directory.appendingPathComponent(name)
         let redacted = try await redactor.redact(record.pastedText)
-        let iso = ISO8601DateFormatter().string(from: record.startedAt)
         let language = record.language ?? ""
         let markdown = """
-        ---
-        time: \(iso)
+        \(TranscriptMetadata.frontmatter(id: record.id, tool: "dictado", startedAt: record.startedAt, duration: record.duration, languages: record.language.map { [$0] } ?? [], redaction: "applied", sources: ["microphone"]))
         language: \(language)
-        duration: \(record.duration)
         ---
 
         \(redacted)

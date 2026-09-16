@@ -24,6 +24,10 @@ final class PlateModel {
     var recordingActaShortcut = false
     var shortcutError: String?
     var folderError: String?
+    var assistantHost: AssistantHost = .codex
+    var assistantStatus = "Not installed"
+    var assistantMessage: String?
+    var indexMessage: String?
     var selectedTool: String?
     var actaStatus: String?
     var actaRecording = false
@@ -58,6 +62,7 @@ struct PlateActions {
     var checkForUpdates: () -> Void = {}
     var setUpdateChecks: (Bool) -> Void = { _ in }
     var setUpdateDownloads: (Bool) -> Void = { _ in }
+    var assistantAction: (String) -> Void = { _ in }
 }
 
 struct PlateView: View {
@@ -143,6 +148,8 @@ struct PlateView: View {
             receiptTool(acta: false)
             ReceiptRule()
             receiptTool(acta: true)
+            Button("Use with your AI assistant →") { navigate("Preferences") }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Grafico.olive)
             Text("More on the menu soon.")
                 .font(.system(size: 12, design: .serif)).italic().foregroundStyle(Grafico.muted)
                 .frame(maxWidth: .infinity).padding(.vertical, 4)
@@ -289,6 +296,28 @@ struct PlateView: View {
                     Button("Use default", action: actions.resetFolder)
                 }.padding(.bottom, 3)
                 if let error = model.folderError { NoticeBox(text: error, error: true) }
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Eyebrow(text: "Use with your AI assistant")
+                Picker("Assistant", selection: $model.assistantHost) {
+                    ForEach(AssistantHost.allCases) { host in Text(host.label).tag(host) }
+                }.onChange(of: model.assistantHost) { _, _ in actions.assistantAction("refresh") }
+                Text("Find and cite recordings in the transcript folder above. Older folder locations remain discoverable.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                Text(model.assistantStatus).font(.system(size: 11)).textSelection(.enabled)
+                HStack {
+                    Button(model.assistantStatus == "Update available" ? "Update skill" : "Install skill") { actions.assistantAction("install") }
+                        .disabled(model.assistantStatus == "Installed")
+                    Button("Remove") { actions.assistantAction("remove") }
+                        .disabled(!["Installed", "Update available"].contains(model.assistantStatus))
+                    Button("Copy setup command") { actions.assistantAction("copy") }
+                }
+                Text("The skill shares instructions, not permissions. Your assistant may send text it reads to its provider. Remote assistants cannot automatically read this Mac. Cursor reuses compatible personal installations; removing a shared skill affects those assistants too.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                Button("Rebuild recording indexes") { actions.assistantAction("rebuild") }
+                if let message = model.assistantMessage { Text(message).font(.system(size: 11)) }
+                if let message = model.indexMessage { Text(message).font(.system(size: 11)).textSelection(.enabled) }
             }
             Divider()
             if model.updates.available {
