@@ -9,9 +9,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>work.tapas.Tapas</string>
 	<key>CFBundleVersion</key>
-	<string>8</string>
+	<string>9</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.5</string>
+	<string>0.2.0</string>
 	<key>CFBundleIconFile</key>
 	<string>Tapas.icns</string>
 	<key>CFBundleExecutable</key>

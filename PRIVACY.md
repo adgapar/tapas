@@ -55,6 +55,24 @@ explicit Discard meeting remove the session’s remaining recovery files.
 Failed/interrupted sessions retain them until resolved. An abrupt crash can lose
 up to the last five seconds before the next chunk is journaled.
 
+## Transcript discovery and assistant skills
+
+The transcript folder is selectable in Preferences; the paths above are defaults.
+Tapas writes local discovery indexes containing recording dates, durations, titles
+when supplied, and short excerpts of saved text. Dictado previews use its redacted
+saved text; Acta previews contain unredacted meeting text. Indexes live beside the
+transcripts and are subject to the same folder-sync services you choose.
+
+`~/Library/Application Support/Tapas/library.json` stores the current transcript
+folder path and previously selected paths. Changing folders does not move files
+or remove older folders from discovery. Active and recovered recordings retain
+their original destinations.
+
+Installing a Tapas assistant skill writes local instructions for finding and citing
+recordings. It does not upload transcripts or grant file access. Your independently
+chosen assistant may process text it reads through its own provider and settings.
+Removing a skill does not remove transcripts, indexes, or the location setting.
+
 ## Network use
 
 Setup downloads model files through the Desert Ant SDK. The app can reuse those
