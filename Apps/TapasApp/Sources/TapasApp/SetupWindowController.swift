@@ -28,6 +28,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     let model: SetupModel
     private var pollTask: Task<Void, Never>?
     private var completionReported = false
+    private(set) var assistantSetupRequested = false
 
     init(flow: SetupFlow) {
         model = SetupModel(flow: flow)
@@ -55,7 +56,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onChooseFolder: { [weak self] in self?.chooseFolder?() },
             onDefaultFolder: { [weak self] in self?.defaultFolder?() },
             onPrepare: { [weak self] in await self?.prepare() },
-            onEntered: { [weak self] in self?.onEntered?() }
+            onEntered: { [weak self] in self?.onEntered?() },
+            onAssistantSetup: { [weak self] in await self?.finishForAssistantSetup() }
         ) })
         window.appearance = NSAppearance(named: .aqua)
         window.center()
@@ -133,6 +135,13 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             UserDefaults.standard.set(true, forKey: "setupWelcomeSeen")
             setStage(model.stage + 1)
         }
+    }
+
+    func finishForAssistantSetup() async {
+        guard model.stage == 3, model.completedPractice, !model.busy,
+              !model.phase.isActive, !completionReported else { return }
+        assistantSetupRequested = true
+        await primary()
     }
 
     private func requestMicrophone() async {

@@ -1,6 +1,7 @@
 # Use Tapas with your AI assistant
 
-Open **Preferences → Use with your AI assistant**, choose Claude Code, Codex,
+After your onboarding practice take, choose **Set up assistant**, or open
+**Preferences → Use with your AI assistant** anytime. Choose Claude Code, Codex,
 or Cursor, and select **Install skill**. Start a new assistant session, then ask
 something like: “Find what we decided about onboarding last week in my Tapas recordings.”
 The same controls show installation status, update or remove an intact Tapas skill,

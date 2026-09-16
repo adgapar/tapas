@@ -296,14 +296,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             UserDefaults.standard.set(true, forKey: "setupComplete")
             self?.showNotice("Ready with gusto. Your next thought is one shortcut away.")
         }
-        controller.onDismissed = { [weak self] in
+        controller.onDismissed = { [weak self, weak controller] in
             guard let self else { return }
+            let openAssistantSetup = controller?.assistantSetupRequested == true
             Task {
                 // Closing practice cancels capture, but lets an in-flight final pass finish in practice mode.
                 await session?.silence()
                 while await session?.snapshot().phase == .finishing { try? await Task.sleep(for: .milliseconds(30)) }
                 paster.practiceMode = false
                 await session?.setHistoryEnabled(model.settings.historyEnabled)
+                if openAssistantSetup {
+                    model.tab = "Preferences"
+                    model.selectedTool = nil
+                    model.assistantSetupRequest = UUID()
+                }
                 menu?.showHome()
             }
         }

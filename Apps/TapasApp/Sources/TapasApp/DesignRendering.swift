@@ -81,6 +81,12 @@ enum DesignRendering {
             model.practiceText = i == 4 ? "A little more room for the good ideas." : ""
             model.completedPractice = i == 4
             try saveHosted(SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }), size: SetupWindowController.size, to: directory.appendingPathComponent("setup-\(i).png"))
+            if model.completedPractice {
+                let surface = FittedSurface(width: SetupWindowController.size.width, height: SetupWindowController.size.height) {
+                    SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in })
+                }
+                try saveHosted(surface, size: NSSize(width: 704, height: 624), to: directory.appendingPathComponent("setup-assistant-small.png"))
+            }
         }
         let welcome = SetupModel(flow: SetupFlow(phase: .peek))
         welcome.entered = true
@@ -104,6 +110,8 @@ enum DesignRendering {
             model.tab = tab
             try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
+        model.assistantSetupRequest = UUID()
+        try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-assistant-setup.png"))
         try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 400, height: 300), to: directory.appendingPathComponent("acta-suggestion.png"))
         let acta = ActaController()
         acta.model.ready = true

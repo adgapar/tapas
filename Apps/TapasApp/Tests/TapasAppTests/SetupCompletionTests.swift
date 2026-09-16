@@ -70,3 +70,40 @@ import Testing
     #expect(controller.model.stage == 2)
     #expect(controller.model.phase == .idle)
 }
+
+@MainActor @Test func assistantSetupCompletesOnboardingOnlyAfterPracticeIsFinished() async {
+    _ = NSApplication.shared
+    let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt))
+    var completions = 0
+    controller.onFinished = { completions += 1 }
+
+    await controller.finishForAssistantSetup()
+    #expect(!controller.assistantSetupRequested)
+    controller.model.completedPractice = true
+    controller.model.phase = .finishing
+    await controller.finishForAssistantSetup()
+    #expect(!controller.assistantSetupRequested)
+    #expect(completions == 0)
+
+    controller.model.phase = .delivered
+    controller.model.busy = true
+    await controller.finishForAssistantSetup()
+    #expect(!controller.assistantSetupRequested)
+    controller.model.busy = false
+    await controller.finishForAssistantSetup()
+    #expect(controller.assistantSetupRequested)
+    #expect(controller.model.flow.phase == .finished)
+    #expect(completions == 1)
+    await controller.finishForAssistantSetup()
+    #expect(completions == 1)
+}
+
+@MainActor @Test func finishingPracticeWithoutAssistantSetupKeepsItOptional() async {
+    _ = NSApplication.shared
+    let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt))
+    controller.model.completedPractice = true
+    controller.model.phase = .delivered
+    await controller.primary()
+    #expect(controller.model.flow.phase == .finished)
+    #expect(!controller.assistantSetupRequested)
+}

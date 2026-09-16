@@ -27,6 +27,7 @@ final class PlateModel {
     var assistantHost: AssistantHost = .codex
     var assistantStatus = "Not installed"
     var assistantMessage: String?
+    var assistantSetupRequest: UUID?
     var indexMessage: String?
     var selectedTool: String?
     var actaStatus: String?
@@ -97,22 +98,29 @@ struct PlateView: View {
                     Eyebrow(text: model.selectedTool ?? model.tab)
                 }.font(.system(size: 11)).buttonStyle(.plain).padding(.horizontal, 29).padding(.bottom, 16)
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    if let notice = model.notice { NoticeBox(text: notice) }
-                    if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
-                        ResultView(snapshot: model.snapshot, actions: actions)
-                        ReceiptRule()
-                    }
-                    if homeSelected { tools }
-                    else if model.tab == "Tools" {
-                        if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
-                        else { dictado }
-                    } else if model.tab == "Recent" { recent }
-                    else { preferences }
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 4).padding(.bottom, homeSelected ? 12 : 24)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        if let notice = model.notice { NoticeBox(text: notice) }
+                        if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
+                            ResultView(snapshot: model.snapshot, actions: actions)
+                            ReceiptRule()
+                        }
+                        if homeSelected { tools }
+                        else if model.tab == "Tools" {
+                            if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
+                            else { dictado }
+                        } else if model.tab == "Recent" { recent }
+                        else { preferences }
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 4).padding(.bottom, homeSelected ? 12 : 24)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .task(id: model.assistantSetupRequest) {
+                    guard model.assistantSetupRequest != nil, model.tab == "Preferences" else { return }
+                    await Task.yield()
+                    proxy.scrollTo("assistant-setup", anchor: .top)
+                }
+            }
             ReceiptRule().padding(.horizontal, homeSelected ? 18 : 22)
             HStack(spacing: 15) {
                 Button("Your files ↗", action: actions.folder)
@@ -318,7 +326,7 @@ struct PlateView: View {
                 Button("Rebuild recording indexes") { actions.assistantAction("rebuild") }
                 if let message = model.assistantMessage { Text(message).font(.system(size: 11)) }
                 if let message = model.indexMessage { Text(message).font(.system(size: 11)).textSelection(.enabled) }
-            }
+            }.id("assistant-setup")
             Divider()
             if model.updates.available {
                 VStack(alignment: .leading, spacing: 12) {

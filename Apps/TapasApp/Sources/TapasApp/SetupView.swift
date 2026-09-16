@@ -48,6 +48,7 @@ struct SetupView: View {
     var onDefaultFolder: () -> Void = {}
     var onPrepare: () async -> Void = {}
     var onEntered: () -> Void = {}
+    var onAssistantSetup: () async -> Void = {}
     var animateServing = true
     private var openingDoorState = SwiftUI.State<Bool>(initialValue: false)
     private var openingDoor: Bool {
@@ -226,11 +227,19 @@ struct SetupView: View {
             ScrollView { Text(model.practiceText).font(.system(size: 20, design: .serif)).italic().lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 120)
             ReceiptRule()
             Text("One thought. In your own words.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            Button("Take it with you →") {
-                withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
-            }.buttonStyle(GraficoButtonStyle()).disabled(leavingBar || model.busy)
             Button("Try another thought") { Task { await onPractice() } }.buttonStyle(.plain).font(.system(size: 11)).disabled(model.busy)
             Text("Practice stays here. Nothing was pasted or saved.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
+            ReceiptRule()
+            Text("Use your recordings with your AI assistant").font(.system(size: 15, weight: .medium))
+            Text("Set up Claude Code, Codex or Cursor to find recordings and answer questions about them.")
+                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            HStack(spacing: 16) {
+                Button("Set up assistant") { Task { await onAssistantSetup() } }
+                    .buttonStyle(GraficoButtonStyle(secondary: true, compact: true))
+                Button("Maybe later") {
+                    withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
+                }.buttonStyle(.plain).font(.system(size: 11))
+            }.disabled(leavingBar || model.busy)
         }
     }
 
