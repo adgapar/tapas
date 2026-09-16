@@ -1,5 +1,5 @@
 Tapas — Small tools. Good company.
-0.2.1 · Dictado + Acta
+0.2.2 · Dictado + Acta
 
 Requires an Apple silicon Mac (M1 or newer) running macOS 15 or later.
 
@@ -30,7 +30,7 @@ Future updates become available when a new signed release is published.
 
 Dictado's optional redacted history: ~/Documents/tapas/dictado/
 Acta's full meeting transcripts: ~/Documents/tapas/acta/
-Choose Set up assistant after your onboarding practice take, or use
+Use the optional assistant controls on the final onboarding step, or open
 Preferences → Use with your AI assistant to install the local Tapas skill
 for Claude Code, Codex, or Cursor. Start a new assistant session after installing.
 Transcripts include factual metadata, with INDEX.md and monthly discovery indexes.

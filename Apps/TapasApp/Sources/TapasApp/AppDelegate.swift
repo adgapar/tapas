@@ -249,13 +249,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if let previous = setup?.model.flow, previous.phase != .finished { flow = previous }
         if !UserDefaults.standard.bool(forKey: "setupComplete"), !UserDefaults.standard.bool(forKey: "setupWelcomeSeen") { flow.phase = .peek }
         flow.hotkeyLabel = model.settings.hotkey.label
-        let controller = SetupWindowController(flow: flow)
+        let controller = SetupWindowController(flow: flow, assistant: model.assistant)
         controller.setStage(UserDefaults.standard.bool(forKey: "setupComplete") ? 0 : UserDefaults.standard.integer(forKey: "onboardingStage"))
         controller.model.entered = controller.model.stage > 0 || UserDefaults.standard.bool(forKey: "setupBarEntered") || UserDefaults.standard.bool(forKey: "setupWelcomeSeen") || UserDefaults.standard.bool(forKey: "setupComplete")
         if replayEntrance { controller.setStage(0); controller.model.entered = false }
         controller.onEntered = { UserDefaults.standard.set(true, forKey: "setupBarEntered") }
         controller.model.transcriptDirectory = model.settings.transcriptDirectory
         controller.model.folderConfirmed = UserDefaults.standard.bool(forKey: "transcriptFolderConfirmed")
+        controller.onAssistantAction = { [weak self] in self?.assistantAction($0) }
         controller.onStageChanged = { UserDefaults.standard.set($0, forKey: "onboardingStage") }
         controller.allowAppAudio = { [weak self, weak controller] in
             await self?.acta.allowAppAudio()
@@ -296,20 +297,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             UserDefaults.standard.set(true, forKey: "setupComplete")
             self?.showNotice("Ready with gusto. Your next thought is one shortcut away.")
         }
-        controller.onDismissed = { [weak self, weak controller] in
+        controller.onDismissed = { [weak self] in
             guard let self else { return }
-            let openAssistantSetup = controller?.assistantSetupRequested == true
             Task {
                 // Closing practice cancels capture, but lets an in-flight final pass finish in practice mode.
                 await session?.silence()
                 while await session?.snapshot().phase == .finishing { try? await Task.sleep(for: .milliseconds(30)) }
                 paster.practiceMode = false
                 await session?.setHistoryEnabled(model.settings.historyEnabled)
-                if openAssistantSetup {
-                    model.tab = "Preferences"
-                    model.selectedTool = nil
-                    model.assistantSetupRequest = UUID()
-                }
                 menu?.showHome()
             }
         }
@@ -537,8 +532,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             for path in [location.current_root] + location.previous_roots {
                 queueIndex(root: URL(fileURLWithPath: path, isDirectory: true))
             }
-        } catch { model.assistantMessage = "Library discovery couldn’t be updated: " + error.localizedDescription }
-        model.assistantStatus = AssistantSkill().status(for: model.assistantHost)
+        } catch { model.assistant.message = "Library discovery couldn’t be updated: " + error.localizedDescription }
+        model.assistant.status = AssistantSkill().status(for: model.assistant.host)
     }
 
     private func queueIndex(root: URL) {
@@ -565,21 +560,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             switch action {
             case "install":
                 try LibraryLocation.update(root: model.settings.transcriptDirectory)
-                let directory = try skill.install(for: model.assistantHost)
-                model.assistantMessage = "Installed at \(directory.path). Start a new assistant session to load it."
+                _ = try skill.install(for: model.assistant.host)
+                model.assistant.message = "Skill installed. Start a new assistant session to load it."
             case "remove":
-                try skill.remove(for: model.assistantHost)
-                model.assistantMessage = "Skill removed. Recordings are unchanged."
+                try skill.remove(for: model.assistant.host)
+                model.assistant.message = "Skill removed. Recordings are unchanged."
             case "copy":
                 if let executable = Bundle.main.executableURL {
-                    copy(AssistantSkill.setupCommand(executable: executable, host: model.assistantHost))
-                    model.assistantMessage = "Setup command copied. Run it locally to install the skill."
+                    copy(AssistantSkill.setupCommand(executable: executable, host: model.assistant.host))
+                    model.assistant.message = "Setup command copied. Run it locally to install the skill."
                 }
+            case "refresh": model.assistant.message = nil
             case "rebuild": reconcileLibrary()
             default: break
             }
-        } catch { model.assistantMessage = error.localizedDescription }
-        model.assistantStatus = AssistantSkill().status(for: model.assistantHost)
+        } catch { model.assistant.message = error.localizedDescription }
+        model.assistant.status = AssistantSkill().status(for: model.assistant.host)
     }
 
     private func revealHistory() {

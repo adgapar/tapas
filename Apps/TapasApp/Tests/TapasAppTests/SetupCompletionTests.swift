@@ -71,39 +71,39 @@ import Testing
     #expect(controller.model.phase == .idle)
 }
 
-@MainActor @Test func assistantSetupCompletesOnboardingOnlyAfterPracticeIsFinished() async {
+@MainActor @Test func assistantInstallationIsAvailableWithoutPracticeAndKeepsSetupOpen() async {
     _ = NSApplication.shared
-    let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt))
+    let assistant = AssistantSetupModel()
+    let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt), assistant: assistant)
     var completions = 0
+    var actions: [String] = []
     controller.onFinished = { completions += 1 }
-
-    await controller.finishForAssistantSetup()
-    #expect(!controller.assistantSetupRequested)
-    controller.model.completedPractice = true
-    controller.model.phase = .finishing
-    await controller.finishForAssistantSetup()
-    #expect(!controller.assistantSetupRequested)
+    controller.onAssistantAction = { action in
+        actions.append(action)
+        if action == "install" { assistant.status = "Installed" }
+    }
+    #expect(!controller.model.completedPractice)
+    #expect(!controller.model.flow.modelsReady)
+    controller.assistantAction("install")
+    #expect(actions == ["install"])
+    #expect(controller.model.assistant === assistant)
+    #expect(controller.model.assistant.status == "Installed")
+    #expect(controller.model.flow.phase == .tryIt)
     #expect(completions == 0)
-
-    controller.model.phase = .delivered
-    controller.model.busy = true
-    await controller.finishForAssistantSetup()
-    #expect(!controller.assistantSetupRequested)
-    controller.model.busy = false
-    await controller.finishForAssistantSetup()
-    #expect(controller.assistantSetupRequested)
-    #expect(controller.model.flow.phase == .finished)
-    #expect(completions == 1)
-    await controller.finishForAssistantSetup()
+    controller.model.phase = .listening
+    controller.assistantAction("install")
+    #expect(actions.count == 1)
+    controller.model.phase = .idle
+    await controller.primary()
     #expect(completions == 1)
 }
 
-@MainActor @Test func finishingPracticeWithoutAssistantSetupKeepsItOptional() async {
+@MainActor @Test func finishingWithoutAssistantInstallationOrPracticeKeepsBothOptional() async {
     _ = NSApplication.shared
     let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt))
-    controller.model.completedPractice = true
-    controller.model.phase = .delivered
+    var installations = 0
+    controller.onAssistantAction = { if $0 == "install" { installations += 1 } }
     await controller.primary()
     #expect(controller.model.flow.phase == .finished)
-    #expect(!controller.assistantSetupRequested)
+    #expect(installations == 0)
 }

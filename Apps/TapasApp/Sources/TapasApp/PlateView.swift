@@ -24,10 +24,7 @@ final class PlateModel {
     var recordingActaShortcut = false
     var shortcutError: String?
     var folderError: String?
-    var assistantHost: AssistantHost = .codex
-    var assistantStatus = "Not installed"
-    var assistantMessage: String?
-    var assistantSetupRequest: UUID?
+    let assistant = AssistantSetupModel()
     var indexMessage: String?
     var selectedTool: String?
     var actaStatus: String?
@@ -98,28 +95,15 @@ struct PlateView: View {
                     Eyebrow(text: model.selectedTool ?? model.tab)
                 }.font(.system(size: 11)).buttonStyle(.plain).padding(.horizontal, 29).padding(.bottom, 16)
             }
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        if let notice = model.notice { NoticeBox(text: notice) }
-                        if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
-                            ResultView(snapshot: model.snapshot, actions: actions)
-                            ReceiptRule()
-                        }
-                        if homeSelected { tools }
-                        else if model.tab == "Tools" {
-                            if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
-                            else { dictado }
-                        } else if model.tab == "Recent" { recent }
-                        else { preferences }
-                    }.frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 4).padding(.bottom, homeSelected ? 12 : 24)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
-                .task(id: model.assistantSetupRequest) {
-                    guard model.assistantSetupRequest != nil, model.tab == "Preferences" else { return }
-                    await Task.yield()
-                    proxy.scrollTo("assistant-setup", anchor: .top)
+            if homeSelected {
+                ViewThatFits(in: .vertical) {
+                    pageContent.fixedSize(horizontal: false, vertical: true)
+                    ScrollView { pageContent }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else {
+                ScrollView { pageContent }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             ReceiptRule().padding(.horizontal, homeSelected ? 18 : 22)
             HStack(spacing: 15) {
@@ -134,6 +118,23 @@ struct PlateView: View {
         .background { ReceiptPaper().fill(Grafico.card).shadow(color: Grafico.ink.opacity(0.20), radius: 14, x: 4, y: 12) }
         .padding(16).frame(width: model.preferredWindowSize.width, height: model.preferredWindowSize.height)
         .foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+    }
+
+    private var pageContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            if let notice = model.notice { NoticeBox(text: notice) }
+            if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
+                ResultView(snapshot: model.snapshot, actions: actions)
+                ReceiptRule()
+            }
+            if homeSelected { tools }
+            else if model.tab == "Tools" {
+                if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
+                else { dictado }
+            } else if model.tab == "Recent" { recent }
+            else { preferences }
+        }.frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 4).padding(.bottom, homeSelected ? 12 : 24)
     }
 
     private func navigate(_ tab: String) {
@@ -156,8 +157,6 @@ struct PlateView: View {
             receiptTool(acta: false)
             ReceiptRule()
             receiptTool(acta: true)
-            Button("Use with your AI assistant →") { navigate("Preferences") }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Grafico.olive)
             Text("More on the menu soon.")
                 .font(.system(size: 12, design: .serif)).italic().foregroundStyle(Grafico.muted)
                 .frame(maxWidth: .infinity).padding(.vertical, 4)
@@ -183,8 +182,6 @@ struct PlateView: View {
                 Text("Recording starts when you choose.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
             } else {
                 dictadoButton
-                Button("Dictado options →") { model.selectedTool = "Dictado" }
-                    .buttonStyle(.plain).font(.system(size: 10))
             }
         }.padding(.vertical, 2)
     }
@@ -308,25 +305,19 @@ struct PlateView: View {
             Divider()
             VStack(alignment: .leading, spacing: 8) {
                 Eyebrow(text: "Use with your AI assistant")
-                Picker("Assistant", selection: $model.assistantHost) {
-                    ForEach(AssistantHost.allCases) { host in Text(host.label).tag(host) }
-                }.onChange(of: model.assistantHost) { _, _ in actions.assistantAction("refresh") }
-                Text("Find and cite recordings in the transcript folder above. Older folder locations remain discoverable.")
+                Text("Find and cite recordings in your transcript folder. Older folder locations remain discoverable.")
                     .font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                Text(model.assistantStatus).font(.system(size: 11)).textSelection(.enabled)
+                AssistantSetupView(model: model.assistant, onAction: actions.assistantAction)
                 HStack {
-                    Button(model.assistantStatus == "Update available" ? "Update skill" : "Install skill") { actions.assistantAction("install") }
-                        .disabled(model.assistantStatus == "Installed")
                     Button("Remove") { actions.assistantAction("remove") }
-                        .disabled(!["Installed", "Update available"].contains(model.assistantStatus))
+                        .disabled(!["Installed", "Update available"].contains(model.assistant.status))
                     Button("Copy setup command") { actions.assistantAction("copy") }
                 }
-                Text("The skill shares instructions, not permissions. Your assistant may send text it reads to its provider. Remote assistants cannot automatically read this Mac. Cursor reuses compatible personal installations; removing a shared skill affects those assistants too.")
+                Text("Remote assistants cannot automatically read this Mac. Cursor reuses compatible personal installations; removing a shared skill affects those assistants too.")
                     .font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 Button("Rebuild recording indexes") { actions.assistantAction("rebuild") }
-                if let message = model.assistantMessage { Text(message).font(.system(size: 11)) }
                 if let message = model.indexMessage { Text(message).font(.system(size: 11)).textSelection(.enabled) }
-            }.id("assistant-setup")
+            }
             Divider()
             if model.updates.available {
                 VStack(alignment: .leading, spacing: 12) {

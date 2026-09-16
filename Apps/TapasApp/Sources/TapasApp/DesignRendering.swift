@@ -76,6 +76,23 @@ enum DesignRendering {
 
     static func renderViews(to directory: URL) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for state in ["ready", "installed", "conflict", "unprepared", "receipt-installed"] {
+            let setup = SetupModel(flow: SetupFlow(phase: .tryIt, microphoneGranted: state != "unprepared", modelsReady: state != "unprepared"))
+            if state == "installed" || state == "receipt-installed" {
+                setup.assistant.status = "Installed"
+                setup.assistant.message = "Skill installed. Start a new assistant session to load it."
+            } else if state == "conflict" {
+                setup.assistant.status = "Needs attention"
+                setup.assistant.message = "An existing skill has been modified. Your files were preserved. Review the existing installation before trying again."
+            }
+            if state == "receipt-installed" {
+                setup.completedPractice = true
+                setup.practiceText = "A little more room for the good ideas."
+            }
+            let view = SetupView(model: setup, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }, animateServing: false)
+            try saveHosted(view, size: SetupWindowController.size, to: directory.appendingPathComponent("setup-assistant-\(state).png"))
+            try save(view, to: directory.appendingPathComponent("setup-assistant-\(state)-perspective.png"), scale: 1)
+        }
         for (i, phase) in [SetupPhase.peek, .microphone, .accessibility, .kitchen, .tryIt, .finished].enumerated() {
             let model = SetupModel(flow: SetupFlow(phase: phase, microphoneGranted: i > 1, modelsReady: i > 3, downloadFraction: 0.64))
             model.practiceText = i == 4 ? "A little more room for the good ideas." : ""
@@ -110,8 +127,7 @@ enum DesignRendering {
             model.tab = tab
             try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
-        model.assistantSetupRequest = UUID()
-        try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-assistant-setup.png"))
+
         try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 400, height: 300), to: directory.appendingPathComponent("acta-suggestion.png"))
         let acta = ActaController()
         acta.model.ready = true

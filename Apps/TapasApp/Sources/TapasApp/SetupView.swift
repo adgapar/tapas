@@ -3,6 +3,7 @@ import TapasCore
 
 @MainActor @Observable
 final class SetupModel {
+    let assistant: AssistantSetupModel
     var flow: SetupFlow
     var stage = 0
     var entered = false
@@ -18,7 +19,8 @@ final class SetupModel {
     var transcriptDirectory = TapasSettings().transcriptDirectory
     var folderConfirmed = false
     var folderError: String?
-    init(flow: SetupFlow) {
+    init(flow: SetupFlow, assistant: AssistantSetupModel = AssistantSetupModel()) {
+        self.assistant = assistant
         self.flow = flow
         entered = flow.phase != .peek
         switch flow.phase {
@@ -48,7 +50,7 @@ struct SetupView: View {
     var onDefaultFolder: () -> Void = {}
     var onPrepare: () async -> Void = {}
     var onEntered: () -> Void = {}
-    var onAssistantSetup: () async -> Void = {}
+    var onAssistantAction: (String) -> Void = { _ in }
     var animateServing = true
     private var openingDoorState = SwiftUI.State<Bool>(initialValue: false)
     private var openingDoor: Bool {
@@ -220,26 +222,19 @@ struct SetupView: View {
     }
 
     private var firstReceipt: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             Eyebrow(text: "tapas / your first words")
             Text("Something\nto take with you.").font(.system(size: 28, design: .serif)).italic()
             ReceiptRule()
-            ScrollView { Text(model.practiceText).font(.system(size: 20, design: .serif)).italic().lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 120)
+            ScrollView { Text(model.practiceText).font(.system(size: 20, design: .serif)).italic().lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 70)
             ReceiptRule()
-            Text("One thought. In your own words.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             Button("Try another thought") { Task { await onPractice() } }.buttonStyle(.plain).font(.system(size: 11)).disabled(model.busy)
             Text("Practice stays here. Nothing was pasted or saved.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
             ReceiptRule()
-            Text("Use your recordings with your AI assistant").font(.system(size: 15, weight: .medium))
-            Text("Set up Claude Code, Codex or Cursor to find recordings and answer questions about them.")
-                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            HStack(spacing: 16) {
-                Button("Set up assistant") { Task { await onAssistantSetup() } }
-                    .buttonStyle(GraficoButtonStyle(secondary: true, compact: true))
-                Button("Maybe later") {
-                    withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
-                }.buttonStyle(.plain).font(.system(size: 11))
-            }.disabled(leavingBar || model.busy)
+            assistantSetup
+            Button("Open Tapas →") {
+                withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
+            }.buttonStyle(GraficoButtonStyle()).disabled(leavingBar || model.busy)
         }
     }
 
@@ -290,7 +285,7 @@ struct SetupView: View {
         default:
             HStack(spacing: 18) {
                 PintxoWaveform(recording: model.phase == .listening, level: model.level)
-                    .scaleEffect(0.58).frame(width: 76, height: 94)
+                    .scaleEffect(0.48).frame(width: 76, height: 74)
                 VStack(alignment: .leading, spacing: 8) {
                     Eyebrow(text: "Try a little before you go")
                     heading("Say something small.")
@@ -317,8 +312,19 @@ struct SetupView: View {
                     Text("Nothing is pasted or saved during practice.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 }
             }
+            ReceiptRule()
+            assistantSetup
             primary(model.completedPractice ? "Lovely. Let’s begin →" : "Open Tapas →", disabled: model.phase.isActive)
-            Text("Acta suggests recording when another app uses your microphone. Recording is always your choice.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+        }
+    }
+
+    private var assistantSetup: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Use with your AI assistant · optional").font(.system(size: 13, weight: .medium))
+            Text("Find recordings and ask questions about them with Claude Code, Codex or Cursor.")
+                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            AssistantSetupView(model: model.assistant, onAction: onAssistantAction)
+                .disabled(model.busy || model.phase.isActive || leavingBar)
         }
     }
 

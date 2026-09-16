@@ -28,10 +28,10 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     let model: SetupModel
     private var pollTask: Task<Void, Never>?
     private var completionReported = false
-    private(set) var assistantSetupRequested = false
+    var onAssistantAction: ((String) -> Void)?
 
-    init(flow: SetupFlow) {
-        model = SetupModel(flow: flow)
+    init(flow: SetupFlow, assistant: AssistantSetupModel = AssistantSetupModel()) {
+        model = SetupModel(flow: flow, assistant: assistant)
         let window = FloatingWindow(contentRect: NSRect(origin: .zero, size: Self.size),
                                     styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
         configureFloatingWindow(window)
@@ -57,7 +57,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onDefaultFolder: { [weak self] in self?.defaultFolder?() },
             onPrepare: { [weak self] in await self?.prepare() },
             onEntered: { [weak self] in self?.onEntered?() },
-            onAssistantSetup: { [weak self] in await self?.finishForAssistantSetup() }
+            onAssistantAction: { [weak self] in self?.assistantAction($0) }
         ) })
         window.appearance = NSAppearance(named: .aqua)
         window.center()
@@ -137,11 +137,10 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
-    func finishForAssistantSetup() async {
-        guard model.stage == 3, model.completedPractice, !model.busy,
-              !model.phase.isActive, !completionReported else { return }
-        assistantSetupRequested = true
-        await primary()
+    func assistantAction(_ action: String) {
+        guard model.stage == 3, !model.busy, !model.phase.isActive,
+              action == "install" || action == "refresh" else { return }
+        onAssistantAction?(action)
     }
 
     private func requestMicrophone() async {
