@@ -143,7 +143,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     @objc private func checkForUpdates() { updater.check() }
-    @objc private func openSetup() { presentSetup() }
+    @objc private func openSetup() { presentSetup(replayEntrance: true) }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
         menuItem.action != #selector(checkForUpdates) || model.updates.canCheck
@@ -186,7 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func makeActions() -> PlateActions {
         PlateActions(
             talk: { [weak self] in Task { await self?.talk(fromUI: true) } },
-            setup: { [weak self] in self?.presentSetup() },
+            setup: { [weak self] in self?.presentSetup(replayEntrance: true) },
             setHotkey: { [weak self] in self?.applyHotkey($0) },
             recordHotkey: { [weak self] in
                 guard let self, !model.snapshot.phase.isActive else { return }
@@ -223,7 +223,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         )
     }
 
-    private func presentSetup() {
+    private func presentSetup(replayEntrance: Bool = false) {
         acta.dismissReceipt()
         finishShortcutRecording()
         menu?.close()
@@ -234,13 +234,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             menu?.show()
             return
         }
-        if let setup, setup.model.flow.phase != .finished { setup.show(); return }
+        if let setup, setup.model.flow.phase != .finished {
+            if replayEntrance { setup.setStage(0); setup.model.entered = false }
+            setup.show(); return
+        }
         var flow = SetupFlow.start(microphoneGranted: model.microphoneGranted, accessibilityTrusted: AXIsProcessTrusted(), modelsReady: session != nil)
         if let previous = setup?.model.flow, previous.phase != .finished { flow = previous }
         if !UserDefaults.standard.bool(forKey: "setupComplete"), !UserDefaults.standard.bool(forKey: "setupWelcomeSeen") { flow.phase = .peek }
         flow.hotkeyLabel = model.settings.hotkey.label
         let controller = SetupWindowController(flow: flow)
         controller.setStage(UserDefaults.standard.bool(forKey: "setupComplete") ? 0 : UserDefaults.standard.integer(forKey: "onboardingStage"))
+        controller.model.entered = controller.model.stage > 0 || UserDefaults.standard.bool(forKey: "setupBarEntered") || UserDefaults.standard.bool(forKey: "setupWelcomeSeen") || UserDefaults.standard.bool(forKey: "setupComplete")
+        if replayEntrance { controller.setStage(0); controller.model.entered = false }
+        controller.onEntered = { UserDefaults.standard.set(true, forKey: "setupBarEntered") }
         controller.model.transcriptDirectory = model.settings.transcriptDirectory
         controller.model.folderConfirmed = UserDefaults.standard.bool(forKey: "transcriptFolderConfirmed")
         controller.onStageChanged = { UserDefaults.standard.set($0, forKey: "onboardingStage") }

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import TapasCore
 
-/// Shared native interpretation of design/tapas: Pintxo / Gráfico.
+/// Production Pintxo / Gráfico identity; public exports live in assets/tapas.
 enum Grafico {
     static let ink = Color(red: 0.188, green: 0.231, blue: 0.169)
     static let paper = Color(red: 0.953, green: 0.937, blue: 0.875)
@@ -13,6 +13,14 @@ enum Grafico {
     static let olive = Color(red: 0.506, green: 0.576, blue: 0.310)
     static let muted = Color(red: 0.37, green: 0.42, blue: 0.29)
     static let tagline = "Small tools. Good company."
+}
+
+enum PintxoArtwork {
+    static let widths: [CGFloat] = [53, 67, 53, 38]
+    static let height: CGFloat = 24
+    static let spacing: CGFloat = 29
+    static let tilt: Double = -19
+    static func corner(_ index: Int) -> CGFloat { index == 0 ? 12 : 4 }
 }
 
 struct PintxoMark: View {
@@ -26,21 +34,21 @@ struct PintxoMark: View {
                 let scale = min(size.width / 100, size.height / 150)
                 context.translateBy(x: size.width / 2, y: size.height / 2)
                 context.scaleBy(x: scale, y: scale)
-                context.rotate(by: .degrees(-19))
+                context.rotate(by: .degrees(PintxoArtwork.tilt))
                 var pick = Path()
                 pick.move(to: CGPoint(x: 0, y: -72)); pick.addLine(to: CGPoint(x: 0, y: 72))
                 context.stroke(pick, with: .color(Grafico.ink), style: StrokeStyle(lineWidth: 2, lineCap: .round))
                 let time = reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                let widths: [CGFloat] = [53, 67, 53, 38]
+                let widths = PintxoArtwork.widths
                 let colors = [Grafico.saffron, Grafico.cobalt, Grafico.paprika, Grafico.olive]
                 for i in 0..<4 {
                     let gap: CGFloat = phase == .listening ? 7 : 0
-                    let y = CGFloat(i) * (29 + gap) - 54 - gap * 1.5
+                    let y = CGFloat(i) * (PintxoArtwork.spacing + gap) - 54 - gap * 1.5
                     let dx: CGFloat = phase == .finishing || phase == .starting ? sin(time * 4 + Double(i)) * 5 : 0
-                    let rect = CGRect(x: -widths[i] / 2 + dx, y: y, width: widths[i], height: 24)
-                    let path = Path(roundedRect: rect, cornerRadius: i == 0 ? 12 : 4)
+                    let rect = CGRect(x: -widths[i] / 2 + dx, y: y, width: widths[i], height: PintxoArtwork.height)
+                    let path = Path(roundedRect: rect, cornerRadius: PintxoArtwork.corner(i))
                     context.opacity = i < pieces ? 1 : 0.16
-                    context.fill(Path(roundedRect: rect.offsetBy(dx: 2, dy: 3), cornerRadius: i == 0 ? 12 : 4), with: .color(Grafico.ink))
+                    context.fill(Path(roundedRect: rect.offsetBy(dx: 2, dy: 3), cornerRadius: PintxoArtwork.corner(i)), with: .color(Grafico.ink))
                     context.fill(path, with: .color(colors[i]))
                     context.stroke(path, with: .color(Grafico.ink), lineWidth: 1.8)
                 }
@@ -53,17 +61,34 @@ struct PintxoMark: View {
 struct GraficoButtonStyle: ButtonStyle {
     var blue = false
     var secondary = false
+    var compact = false
     @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 13, weight: .semibold))
-            .padding(.horizontal, 16).padding(.vertical, 11)
+            .font(.system(size: compact ? 12 : 13, weight: .semibold))
+            .padding(.horizontal, compact ? 10 : 16).padding(.vertical, compact ? 6 : 11)
             .foregroundStyle(blue ? .white : Grafico.ink)
             .background(secondary ? Grafico.paper : blue ? Grafico.cobalt : Grafico.saffron, in: RoundedRectangle(cornerRadius: 7))
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(Grafico.ink, lineWidth: 1))
             .compositingGroup()
             .shadow(color: Grafico.ink.opacity(isEnabled ? 0.85 : 0), radius: 0, x: configuration.isPressed ? 0 : 2, y: configuration.isPressed ? 0 : 3)
             .offset(y: configuration.isPressed ? 2 : 0)
+            .opacity(isEnabled ? 1 : 0.45)
+    }
+}
+
+struct GraficoMenuSurface: ViewModifier {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: 12, weight: .semibold))
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .foregroundStyle(Grafico.ink)
+            .background(Grafico.paper, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(Grafico.ink, lineWidth: 1).allowsHitTesting(false))
+            .compositingGroup()
+            .shadow(color: Grafico.ink.opacity(isEnabled ? 0.85 : 0), radius: 0, x: 2, y: 3)
             .opacity(isEnabled ? 1 : 0.45)
     }
 }

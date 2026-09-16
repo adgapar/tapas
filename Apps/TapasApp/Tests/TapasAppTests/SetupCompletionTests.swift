@@ -57,3 +57,16 @@ import Testing
     controller.back()
     #expect(controller.model.stage == 2)
 }
+
+@MainActor @Test func resumingSetupSkipsEntranceAndClosingCancelsPresentation() {
+    _ = NSApplication.shared
+    let controller = SetupWindowController(flow: SetupFlow(phase: .peek))
+    #expect(!controller.model.entered)
+    controller.setStage(2)
+    #expect(controller.model.entered)
+    controller.model.isPresented = true
+    controller.windowWillClose(Notification(name: NSWindow.willCloseNotification))
+    #expect(!controller.model.isPresented)
+    #expect(controller.model.stage == 2)
+    #expect(controller.model.phase == .idle)
+}

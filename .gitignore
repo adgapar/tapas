@@ -6,3 +6,6 @@
 dist/
 *.xcodeproj
 .DS_Store
+
+# Exploratory designs belong in private/, not the public source tree.
+/design/

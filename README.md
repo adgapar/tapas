@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="design/tapas/icon.svg" width="112" alt="Tapas">
+  <img src="assets/tapas/icon.png" width="112" alt="Tapas">
 </p>
 
 <h1 align="center">Tapas</h1>
@@ -7,53 +7,64 @@
 <p align="center">Local dictation and meeting transcripts for Mac.</p>
 <p align="center">
   <a href="https://github.com/adgapar/tapas/releases/latest"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.3">What’s new</a>
+  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.4">What’s new</a>
 </p>
 <p align="center">Apple silicon · macOS 15 or later</p>
 
-## Why Tapas?
+## Why “tapas”?
 
 Tapas are small Spanish dishes enjoyed together, often over a conversation.
-That is the idea behind the app: a plate of small, useful tools, each with a
-clear job. Reach for Dictado to put a thought into words, or Acta to keep a
-conversation. Choose what you need throughout your day.
+The name borrows that idea: **small tools, each with a clear job**, ready when
+you need them. Dictado puts a thought into words. Acta keeps a conversation.
+Use either on its own, or let them keep you company throughout the day.
 
 The colorful mark is our **pintxo**, inspired by the Basque bite often held
-together with a small pick. Four distinct ingredients—saffron, cobalt, paprika
-and olive—come together on one pick. That shared identity carries through the
-app: tools with their own purpose, a familiar home, and a little personality.
+together with a small pick. Its four ingredients bring the same warmth and
+personality to each tool. **Small tools. Good company.**
 
-Even the names describe what the tools do: **dictado** means dictation in
-Spanish; an **acta** is the written record of a meeting. **Small tools. Good
-company.** brings those useful little companions and the warmth of sharing
-tapas into one line.
+## Two small tools
 
-## Two small tools for your words
+| | Dictado | Acta |
+| --- | --- | --- |
+| Reach for it when… | You want to write by speaking. | You want to keep a meeting or conversation. |
+| It captures | Your voice. | Your microphone and a selected app’s audio. |
+| You get | Text in the app you’re using, with optional local history. | A timestamped Markdown transcript. |
 
-### Dictado — say it, then get on with it
+### Dictado · Speak your next sentence
 
-Press **Control–Option**, speak, and press again. Dictado turns your voice into
-text and puts it in the app you were using. A small recording indicator stays
-out of the way, and optional live words let you follow along.
+*Dictado means “dictation.”* Use it for a message, a note, or a whole paragraph
+without leaving the app in front of you.
 
-Change the shortcut to suit you. Keep a local history when you want one.
+1. Press **Control–Option** to start a take.
+2. Speak. A small recording signal stays visible; live words are optional.
+3. Press again. Your words return to the app you were using.
 
-### Acta — stay in the conversation
+Change the shortcut in Preferences. Turn on history to keep a redacted Markdown
+copy of each take. If automatic paste is unavailable, copy your words from Tapas.
 
-Capture your microphone and the audio from your meeting app. Tapas can offer
-to start Acta when another app uses the microphone—you decide when to record.
-Open Acta with **Control–Shift–M**, or from the shared home. A floating Pintxo
-unfolds into a live waveform while recording; click it for pause, resume and finish.
+### Acta · Stay in the conversation
 
-Finish the meeting and keep a timestamped transcript in Markdown. No meeting
-bot or calendar connection needed.
+*An acta is a written record of a meeting.* Keep what was said in a call,
+interview, or discussion, with your microphone and meeting audio in one transcript.
+
+1. Open Acta with **Control–Shift–M**, or from Tapas’s home.
+2. Choose the meeting app and start recording when everyone is ready.
+3. Pause or resume from the floating Pintxo. Finish to save a timestamped Markdown file.
+
+Tapas can offer to open Acta when another app uses the microphone. Recording
+starts only when you choose it. No meeting bot or calendar connection is needed.
 
 ## Your words stay useful
+
+**Capture on your Mac. Keep your files. Build whatever comes next.**
 
 Transcription runs on your Mac. Saved transcripts are ordinary Markdown files
 in a folder you choose (default **`~/Documents/tapas/`**). Both tools share this
 location, with their own subfolders. Open files in your editor, search them, or
 use them with your favorite AI tools and scripts. You choose what gets access.
+
+**Your files are the interface.** Tapas handles capture; you choose what to do
+with the result.
 
 No Tapas account is required. Your files remain yours to read and use outside
 the app.
@@ -83,7 +94,8 @@ updates; you can also choose **Check for Updates…** in the app.
   included inside the app.
 
 [Report an issue](https://github.com/adgapar/tapas/issues) ·
-[Releases](https://github.com/adgapar/tapas/releases)
+[Releases](https://github.com/adgapar/tapas/releases) ·
+[Developer documentation](docs/README.md)
 
 Powered by [Desert Ant Labs](https://desertant.com).
 Automatic updates by [Sparkle](https://sparkle-project.org).

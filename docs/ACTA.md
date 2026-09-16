@@ -52,7 +52,7 @@ meeting-service or MCP dependencies.
 - Dictado reserves the microphone while it starts; Acta pauses before a take and
   stays paused afterward. Acta cannot start/resume during Dictado or setup.
 - Stream/conversion errors and termination of the selected app pause the meeting.
-  Unlike the HTML study’s microphone-only fallback, both inputs stop so users
+  Both inputs stop so users
   know the recording is incomplete. Waiting-for-audio indicators do not claim
   that a silent app is disconnected. Reopen the app and start a new meeting if
   its process has changed; resume can retry permissions/devices for the same app.
@@ -104,27 +104,3 @@ floating-point microphone formats, including sample-rate changes.
 
 The debug renderer includes Acta preflight, recording, paused, recovery, saved and
 companion views. Rendering uses sample data and never records audio.
-
-## Required live-device checks
-
-- Start a call in a browser, Zoom or Teams: verify app attribution, a single
-  suggestion lasting beyond 30 seconds, dismissal, mute/reconnect suppression and
-  preference opt-out.
-  Unknown system helpers may require manually starting Acta.
-- Allow/deny/revoke microphone and Screen & System Audio Recording access in the
-  packaged app; verify actionable recovery and no recording before Start.
-- Browser meeting, Zoom and Teams: verify the selected app and microphone both
-  reach the transcript, unrelated apps do not, and app moves between displays do
-  not unexpectedly lose audio. Check browser helper-process audio specifically.
-- Pause/resume repeatedly; Dictado from hotkey and Tools; rapid competing starts;
-  check that paused audio never appears and recorded time excludes pauses.
-- Headset/default-device changes, app exit, sleep/wake, OS capture-stop controls,
-  denied permissions and silent inputs: verify status and retained partial audio.
-- A long meeting: measure recognition lag, memory/disk growth and word accuracy
-  around five-second boundaries. Chunked recognition can split words/sentences.
-- Close/minimize the window, change Spaces, finish from the companion, open the
-  saved file from Recent, and retry a denied Documents write.
-- Force termination after a checkpoint: reopen, recover and finish without
-  duplicate segments; verify successful saves/discards remove recovery audio.
-
-These hardware/permission/live-call checks have not been automated or certified.

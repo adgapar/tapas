@@ -4,6 +4,8 @@ import TapasCore
 
 @MainActor
 final class SetupWindowController: NSWindowController, NSWindowDelegate {
+    static let size = NSSize(width: 760, height: 700)
+    var onEntered: (() -> Void)?
     var onFinished: (() -> Void)?
     var onDismissed: (() -> Void)?
     var allowMicrophone: (() async -> Bool)?
@@ -29,7 +31,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
 
     init(flow: SetupFlow) {
         model = SetupModel(flow: flow)
-        let window = FloatingWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 730),
+        let window = FloatingWindow(contentRect: NSRect(origin: .zero, size: Self.size),
                                     styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
         configureFloatingWindow(window)
         super.init(window: window)
@@ -37,7 +39,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         window.isReleasedWhenClosed = false
         window.delegate = self
         let setupModel = model
-        window.contentViewController = NSHostingController(rootView: FittedSurface(width: 920, height: 730) { SetupView(
+        window.contentViewController = NSHostingController(rootView: FittedSurface(width: Self.size.width, height: Self.size.height) { [weak self] in SetupView(
             model: setupModel,
             onPrimary: { [weak self] in await self?.primary() },
             onSecondary: { [weak self] in self?.openAccessibility?() },
@@ -52,7 +54,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onAppAudio: { [weak self] in await self?.allowAppAudio?() },
             onChooseFolder: { [weak self] in self?.chooseFolder?() },
             onDefaultFolder: { [weak self] in self?.defaultFolder?() },
-            onPrepare: { [weak self] in await self?.prepare() }
+            onPrepare: { [weak self] in await self?.prepare() },
+            onEntered: { [weak self] in self?.onEntered?() }
         ) })
         window.appearance = NSAppearance(named: .aqua)
         window.center()
@@ -62,7 +65,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     required init?(coder: NSCoder) { nil }
 
     func show() {
-        if let window { placeFloatingWindow(window, preferred: NSSize(width: 920, height: 730)) }
+        model.isPresented = true
+        if let window { placeFloatingWindow(window, preferred: Self.size) }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         pollTask?.cancel()
@@ -107,6 +111,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
 
     func setStage(_ stage: Int) {
         model.stage = min(3, max(0, stage))
+        if model.stage > 0 { model.entered = true }
         model.flow.phase = [SetupPhase.peek, .microphone, .kitchen, .tryIt][model.stage]
         model.flow.modelError = nil
         onStageChanged?(model.stage)
@@ -169,6 +174,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
+        model.isPresented = false
         reportCompletionIfNeeded()
         pollTask?.cancel()
         pollTask = nil

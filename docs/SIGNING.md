@@ -8,10 +8,6 @@ is not the right identity for this workflow.
 
 ## First certificate
 
-If `dist/signing/Tapas-Developer-ID.certSigningRequest` has already been prepared
-and its private key imported into Keychain, use that request and start at step 2.
-Do not generate a second key for the same request.
-
 1. Open Keychain Access. Choose **Certificate Assistant → Request a Certificate
    From a Certificate Authority**. Enter your account email and name, choose
    **Saved to disk**, and save the CSR. Keep its private key in this Mac’s Keychain.
@@ -109,9 +105,8 @@ The feed must be published before installed copies can check successfully.
 Automatic checks and downloads default to on and can be changed in Preferences.
 Recording, recognition, recovery and first-time setup delay update checks/restarts.
 
-The EdDSA private key is in the login Keychain under account `work.tapas.Tapas`.
-Only the public key is committed in Info.plist. Keep the Keychain backed up;
-do not generate a replacement key for each release.
+Store the EdDSA private signing key securely outside the repository. Only the
+public key belongs in Info.plist. Reuse the same signing identity across releases.
 
 For every release:
 

@@ -92,29 +92,28 @@ struct PintxoWaveform: View {
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     // Explicit storage also builds with CLT SDKs that omit the SwiftUI macro plugin.
     private var appeared = SwiftUI.State<Bool>(initialValue: false)
-    private let widths: [CGFloat] = [46, 58, 46, 34]
     private let colors: [Color] = [Grafico.saffron, Grafico.cobalt, Grafico.paprika, Grafico.olive]
     var body: some View {
         let wave = recording && appeared.wrappedValue && !reducedMotion
         ZStack {
-            Capsule().fill(Grafico.ink).frame(width: 2, height: 110)
-                .opacity(wave ? 0 : 1).scaleEffect(y: wave ? 0.4 : 1)
+            Capsule().fill(Grafico.ink).frame(width: 2, height: 144)
+                .opacity(wave ? 0 : 1)
             ForEach(0..<4) { index in
-                let strength = CGFloat(max(0.16, min(1, level * (3.0 + Double(index % 2)))))
-                RoundedRectangle(cornerRadius: index == 0 ? 9 : 4)
+                let energy = CGFloat(max(0, min(1, level * (index % 2 == 0 ? 2.8 : 3.4))))
+                let height = 25 + energy * 75
+                RoundedRectangle(cornerRadius: PintxoArtwork.corner(index))
                     .fill(colors[index])
-                    .overlay(RoundedRectangle(cornerRadius: index == 0 ? 9 : 4).stroke(Grafico.ink, lineWidth: 1.5))
-                    .frame(width: widths[index], height: 17)
-                    .shadow(color: Grafico.ink, radius: 0, x: 2, y: 2)
-                    .scaleEffect(x: wave ? strength : 1, y: wave ? 0.8 : 1)
+                    .overlay(RoundedRectangle(cornerRadius: PintxoArtwork.corner(index)).stroke(Grafico.ink, lineWidth: 1.8))
+                    .frame(width: wave ? 18 : PintxoArtwork.widths[index], height: wave ? height : PintxoArtwork.height)
+                    .shadow(color: Grafico.ink, radius: 0, x: 2, y: 3)
+                    .offset(x: wave ? CGFloat(index) * 27 - 40.5 : 0,
+                            y: wave ? 0 : CGFloat(index) * PintxoArtwork.spacing - 42)
                     .animation(reducedMotion ? nil : .linear(duration: 0.14), value: level)
-                    .rotationEffect(.degrees(wave ? 90 : 0))
-                    .offset(x: wave ? CGFloat(index) * 22 - 33 : 0, y: wave ? 0 : CGFloat(index) * 25 - 37.5)
             }
         }
-        .rotationEffect(.degrees(wave ? 0 : -17))
-        .frame(width: 110, height: 120)
-        .animation(reducedMotion ? nil : .easeInOut(duration: 0.9), value: wave)
+        .rotationEffect(.degrees(wave ? 0 : PintxoArtwork.tilt))
+        .frame(width: 120, height: 154)
+        .animation(reducedMotion ? nil : .spring(response: 0.65, dampingFraction: 0.86), value: wave)
         .onAppear { appeared.wrappedValue = true }
         .accessibilityHidden(true)
     }

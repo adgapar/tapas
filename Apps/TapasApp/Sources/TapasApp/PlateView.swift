@@ -28,6 +28,10 @@ final class PlateModel {
     var actaStatus: String?
     var actaRecording = false
     var updates = UpdateModel()
+    var preferredWindowSize: NSSize {
+        if tab == "Preferences" { return PlateWindowController.preferencesSize }
+        return tab == "Tools" && selectedTool == nil ? PlateWindowController.homeSize : PlateWindowController.size
+    }
 }
 
 struct PlateActions {
@@ -62,135 +66,112 @@ struct PlateView: View {
     var actaController: ActaController? = nil
     private var homeSelected: Bool { model.tab == "Tools" && model.selectedTool == nil }
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    TapasWordmark()
-                    Text(Grafico.tagline).font(.system(size: 11)).foregroundStyle(Grafico.muted).padding(.leading, 41)
-                }.floatingLabel()
+        VStack(spacing: 0) {
+            ReceiptTrim()
+            HStack(alignment: .center, spacing: 15) {
+                Button { navigate("Tools") } label: { TapasWordmark(size: 23) }
+                    .buttonStyle(.plain).accessibilityLabel("Tapas, all tools")
                 Spacer()
-                ClosePlateButton(action: actions.close)
-            }
-            HStack(spacing: 3) {
-                ForEach(["Tools", "Recent", "Preferences"], id: \.self) { tab in
-                    Button { actions.cancelShortcutRecording(); model.tab = tab; model.selected = nil } label: {
-                        Text(tab).font(.system(size: 12, weight: .medium)).padding(.horizontal, 18).padding(.vertical, 9)
-                            .foregroundStyle(model.tab == tab ? Grafico.card : Grafico.ink)
-                            .background(model.tab == tab ? Grafico.ink : .clear, in: RoundedRectangle(cornerRadius: 6))
-                    }.buttonStyle(.plain).accessibilityAddTraits(model.tab == tab ? .isSelected : [])
-                }
-            }.padding(4).background(Grafico.card, in: RoundedRectangle(cornerRadius: 9))
-            ScrollView {
-                VStack(alignment: .leading, spacing: 17) {
-                    if let notice = model.notice { NoticeBox(text: notice) }
-                    if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
-                        ResultView(snapshot: model.snapshot, actions: actions).plateSurface()
-                    }
-                    if homeSelected { tools }
-                    else {
-                        VStack(alignment: .leading, spacing: 17) {
-                            if model.tab == "Tools" {
-                                Button { model.selectedTool = nil } label: { Label("All tools", systemImage: "chevron.left") }.buttonStyle(.plain)
-                                if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
-                                else { dictado }
-                            } else if model.tab == "Recent" { recent }
-                            else { preferences }
-                        }.frame(maxWidth: .infinity, alignment: .leading).plateSurface()
-                    }
-                }.padding(.trailing, 5).padding(.bottom, 7)
-            }.frame(maxWidth: .infinity, maxHeight: .infinity)
-            HStack(spacing: 18) {
-                Button("Your files ↗", action: actions.folder)
-                Button("Setup", action: actions.setup)
-                Spacer()
-                Text("Local by nature.").foregroundStyle(Grafico.muted)
                 Menu {
+                    Button("All tools") { navigate("Tools") }
+                    Button("Saved words") { navigate("Recent") }
+                    Button("Preferences") { navigate("Preferences") }
+                    Divider()
+                    Button("Setup", action: actions.setup)
                     Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
                     Divider()
                     Button("Quit Tapas", action: actions.quit)
-                } label: { Image(systemName: "ellipsis.circle").accessibilityLabel("More options") }.menuStyle(.borderlessButton).fixedSize()
-            }.font(.system(size: 11)).buttonStyle(.plain).floatingLabel()
-        }.padding(24).frame(width: 710, height: 770).foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+                } label: { Image(systemName: "ellipsis").font(.system(size: 18)) }
+                    .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Tapas menu")
+                ClosePlateButton(action: actions.close)
+            }.padding(.horizontal, homeSelected ? 18 : 22).padding(.top, 12).padding(.bottom, 8)
+            if !homeSelected {
+                HStack {
+                    Button { navigate("Tools") } label: { Label("All tools", systemImage: "chevron.left") }
+                    Spacer()
+                    Eyebrow(text: model.selectedTool ?? model.tab)
+                }.font(.system(size: 11)).buttonStyle(.plain).padding(.horizontal, 29).padding(.bottom, 16)
+            }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    if let notice = model.notice { NoticeBox(text: notice) }
+                    if model.snapshot.phase == .recovery || model.snapshot.phase == .failed {
+                        ResultView(snapshot: model.snapshot, actions: actions)
+                        ReceiptRule()
+                    }
+                    if homeSelected { tools }
+                    else if model.tab == "Tools" {
+                        if model.selectedTool == "Acta", let actaController { ActaView(model: actaController.model, controller: actaController) }
+                        else { dictado }
+                    } else if model.tab == "Recent" { recent }
+                    else { preferences }
+                }.frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 4).padding(.bottom, homeSelected ? 12 : 24)
+            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+            ReceiptRule().padding(.horizontal, homeSelected ? 18 : 22)
+            HStack(spacing: 15) {
+                Button("Your files ↗", action: actions.folder)
+                Spacer()
+                Button(model.tab == "Recent" ? "All tools ↗" : "Saved words ↗") {
+                    navigate(model.tab == "Recent" ? "Tools" : "Recent")
+                }
+            }.font(.system(size: 11)).buttonStyle(.plain).padding(.horizontal, homeSelected ? 18 : 23).padding(.top, 10)
+            BrandCredit().padding(.top, 8).padding(.bottom, 15)
+        }
+        .background { ReceiptPaper().fill(Grafico.card).shadow(color: Grafico.ink.opacity(0.20), radius: 14, x: 4, y: 12) }
+        .padding(16).frame(width: model.preferredWindowSize.width, height: model.preferredWindowSize.height)
+        .foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+    }
+
+    private func navigate(_ tab: String) {
+        actions.cancelShortcutRecording()
+        model.tab = tab
+        model.selected = nil
+        model.selectedTool = nil
     }
 
     private var tools: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Eyebrow(text: "A little room for your day")
-                    Text("What’s on your plate?").font(.system(size: 23, weight: .semibold)).tracking(-0.5)
-                }
-                Spacer()
-                Label("On this Mac", systemImage: "circle.fill").font(.system(size: 9)).foregroundStyle(Grafico.olive)
-            }.floatingLabel()
+        VStack(alignment: .leading, spacing: 8) {
             if let status = model.actaStatus {
-                HStack { Text(status).font(.system(size: 12)); Spacer(); Button("Return →", action: actions.acta).buttonStyle(.plain) }
-                    .padding(12).background(Grafico.card, in: RoundedRectangle(cornerRadius: 9))
+                HStack { Label(status, systemImage: model.actaRecording ? "record.circle" : "pause.circle"); Spacer(); Button("Return →", action: actions.acta) }
+                    .font(.system(size: 11)).foregroundStyle(Grafico.cobalt).buttonStyle(.plain)
             }
             if let error = model.meetingDetectionError { NoticeBox(text: error, error: true) }
             if let error = model.modelError { NoticeBox(text: error, error: true) }
             if model.warming { ProgressView(value: model.progress).tint(Grafico.olive) }
-            HStack(alignment: .top, spacing: 18) {
-                toolCard(acta: false)
-                toolCard(acta: true)
-            }
-            VStack(alignment: .leading, spacing: 13) {
-                HStack {
-                    Eyebrow(text: model.entries.isEmpty ? "Your words, within reach" : "Last on your plate")
-                    Spacer()
-                    Button("All recent →") { model.tab = "Recent"; model.selected = nil }.buttonStyle(.plain).font(.system(size: 11))
-                }
-                if let entry = model.entries.first {
-                    Button { model.tab = "Recent"; model.selected = entry } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "doc.text").font(.system(size: 24)).foregroundStyle(Grafico.olive)
-                            VStack(alignment: .leading, spacing: 5) {
-                                Text(entry.title).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                                Text(entry.date, format: .dateTime.month().day().hour().minute()).font(.system(size: 10)).foregroundStyle(Grafico.muted)
-                            }
-                            Spacer(); Image(systemName: "arrow.up.right")
-                        }
-                    }.buttonStyle(.plain)
-                } else { Text("Your saved takes and meetings appear here. Start with a thought.").font(.system(size: 11)).foregroundStyle(Grafico.muted) }
-            }.plateSurface(Grafico.paper)
+            ReceiptRule()
+            receiptTool(acta: false)
+            ReceiptRule()
+            receiptTool(acta: true)
+            Text("More on the menu soon.")
+                .font(.system(size: 12, design: .serif)).italic().foregroundStyle(Grafico.muted)
+                .frame(maxWidth: .infinity).padding(.vertical, 4)
+
         }
     }
 
-    private func toolCard(acta: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 13) {
-            HStack {
-                Eyebrow(text: acta ? "A conversation, kept" : "A thought, put into words")
-                Spacer(minLength: 4)
-                Text(acta ? (model.actaRecording ? "Recording" : actaController?.model.ready == true && actaController?.model.microphoneGranted == true && actaController?.model.appAudioGranted == true ? "Ready" : "Setup") : model.ready && model.microphoneGranted ? "Ready" : "Setup")
-                    .font(.system(size: 9)).foregroundStyle(Grafico.muted)
-            }.frame(height: 25)
-            ZStack {
-                RoundedRectangle(cornerRadius: 10).fill((acta ? Grafico.cobalt : Grafico.saffron).opacity(0.10))
-                if acta {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Be there.").font(.system(size: 16, design: .serif)).italic()
-                        Text("Keep the conversation.").font(.system(size: 13, design: .serif)).italic().foregroundStyle(Grafico.card)
-                            .padding(8).background(Grafico.cobalt, in: RoundedRectangle(cornerRadius: 7)).padding(.leading, 20)
-                    }
-                } else {
-                    HStack(spacing: 12) {
-                        Image(systemName: "waveform").font(.system(size: 34)).foregroundStyle(Grafico.olive)
-                        Text("hello, idea.").font(.system(size: 18, design: .serif)).italic()
-                    }
+    private func receiptTool(acta: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(acta ? "02" : "01").font(.system(size: 10, design: .monospaced)).foregroundStyle(Grafico.muted)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(acta ? "Acta" : "Dictado").font(.system(size: 24, weight: .semibold)).tracking(-0.7)
+                    Text(acta ? "A conversation, to keep." : "One thought, into words.")
+                        .font(.system(size: 12, design: .serif)).italic().foregroundStyle(Grafico.muted)
                 }
-            }.frame(height: 84)
-            Text(acta ? "Acta" : "Dictado").font(.system(size: 27, weight: .bold)).tracking(-0.7)
-            Text(acta ? "Your voice and the meeting audio.\nOne transcript to come back to." : "A message. A whole paragraph.\nSay it where you want to write it.")
-                .font(.system(size: 12)).foregroundStyle(Grafico.muted).lineSpacing(5).frame(height: 44, alignment: .topLeading)
+                Spacer()
+            }
             if acta {
-                Button(action: actions.acta) { HStack { Text(model.actaStatus == nil ? "Open Acta" : "Return to meeting"); Spacer(); Text(model.settings.actaHotkey.label) } }
-                    .buttonStyle(GraficoButtonStyle(blue: true))
+                Button(action: actions.acta) {
+                    HStack { Text(model.actaStatus == nil ? "Open Acta" : "Return to meeting"); Spacer(); Text(model.settings.actaHotkey.label) }
+                }.buttonStyle(GraficoButtonStyle(blue: true))
                 Text("Recording starts when you choose.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
             } else {
                 dictadoButton
-                Button("Open Dictado →") { model.selectedTool = "Dictado" }.buttonStyle(.plain).font(.system(size: 10))
+                Button("Dictado options →") { model.selectedTool = "Dictado" }
+                    .buttonStyle(.plain).font(.system(size: 10))
             }
-        }.frame(maxWidth: .infinity).plateSurface()
+        }.padding(.vertical, 2)
     }
 
     private var dictadoButton: some View {
@@ -256,63 +237,110 @@ struct PlateView: View {
     }
 
     private var preferences: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack {
-                Text("Dictado shortcut").font(.system(size: 13, weight: .medium)); Spacer()
-                Menu(model.settings.hotkey.label) {
-                    Button("Control–Option") { actions.setHotkey(.standard) }
-                    Button("Right Command") { actions.setHotkey(.rightCommand) }
-                    Button("Record a shortcut…", action: actions.recordHotkey)
-                }.fixedSize().disabled(model.snapshot.phase.isActive)
-            }
-            HStack {
-                Text("Acta shortcut").font(.system(size: 13, weight: .medium)); Spacer()
-                Menu(model.settings.actaHotkey.label) {
-                    Button("Control–Shift–M", action: actions.resetActaHotkey)
-                    Button("Record a shortcut…", action: actions.recordActaHotkey)
-                }.fixedSize().disabled(model.snapshot.phase.isActive)
-            }
-            Text("Opens Acta without starting a recording. Use a key with at least two modifiers.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            if model.recordingShortcut || model.recordingActaShortcut { NoticeBox(text: "Press your new shortcut, then release. Escape keeps the current one.") }
-            if let error = model.shortcutError { NoticeBox(text: error, error: true) }
-            Divider()
-            Text("Transcript folder").font(.system(size: 13, weight: .medium))
-            Text(model.settings.transcriptDirectory.path).font(.system(size: 11)).foregroundStyle(Grafico.muted).textSelection(.enabled)
-            HStack {
-                Button("Choose…", action: actions.chooseFolder)
-                Button("Open", action: actions.folder)
-                Button("Use default", action: actions.resetFolder)
-            }
-            Text("New recordings go into dictado and acta subfolders. Existing files and recordings in progress keep their original location.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            if let error = model.folderError { NoticeBox(text: error, error: true) }
-            Divider()
-            Toggle("Show live words", isOn: $model.settings.overlayEnabled).onChange(of: model.settings.overlayEnabled) { _, _ in actions.preferencesChanged() }
-            Text("Preview your words as you speak. The recording signal stays visible; hover to finish or cancel.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            Toggle("Save Dictado history", isOn: $model.settings.historyEnabled).onChange(of: model.settings.historyEnabled) { _, _ in actions.preferencesChanged() }
-            Text("Keep a redacted Markdown copy after each take. Changing this applies to your next take. Acta always saves its full meeting transcript.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            Divider()
-            Toggle("Suggest Acta when the microphone is in use", isOn: $model.settings.meetingPromptsEnabled)
+        VStack(alignment: .leading, spacing: 14) {
+            Eyebrow(text: "Recording")
+            PreferenceToggle("Show live words", detail: "Preview words as you speak. Hover over the recording signal to finish or cancel.", isOn: $model.settings.overlayEnabled)
+                .onChange(of: model.settings.overlayEnabled) { _, _ in actions.preferencesChanged() }
+            PreferenceToggle("Save Dictado history", detail: "Save a redacted Markdown copy of each take. Applies to your next take; Acta always saves the full transcript.", isOn: $model.settings.historyEnabled)
+                .onChange(of: model.settings.historyEnabled) { _, _ in actions.preferencesChanged() }
+            PreferenceToggle("Suggest Acta", detail: "Offer to record when another app uses your microphone. Recording starts only when you choose Start Acta. No calendar connection needed.", isOn: $model.settings.meetingPromptsEnabled)
                 .onChange(of: model.settings.meetingPromptsEnabled) { _, _ in actions.preferencesChanged() }
-            Text("Offer to record when another app uses your microphone. Nothing is recorded until you choose Start Acta. No calendar connection needed.")
-                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
             if let error = model.meetingDetectionError { NoticeBox(text: error, error: true) }
             Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Eyebrow(text: "Shortcuts")
+                HStack(alignment: .top, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Dictado").fontWeight(.medium)
+                        Menu(model.settings.hotkey.label) {
+                            Button("Control–Option") { actions.setHotkey(.standard) }
+                            Button("Right Command") { actions.setHotkey(.rightCommand) }
+                            Button("Record a shortcut…", action: actions.recordHotkey)
+                        }.menuStyle(.borderlessButton).fixedSize()
+                            .modifier(GraficoMenuSurface())
+                            .accessibilityLabel("Dictado shortcut")
+                            .disabled(model.snapshot.phase.isActive)
+                    }
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Acta").fontWeight(.medium)
+                        Menu(model.settings.actaHotkey.label) {
+                            Button("Control–Shift–M", action: actions.resetActaHotkey)
+                            Button("Record a shortcut…", action: actions.recordActaHotkey)
+                        }.menuStyle(.borderlessButton).fixedSize()
+                            .modifier(GraficoMenuSurface())
+                            .accessibilityLabel("Acta shortcut")
+                            .disabled(model.snapshot.phase.isActive)
+                    }
+                }.padding(.bottom, 3)
+                Text("Acta’s shortcut opens the tool without recording. Use a key with at least two modifiers.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                if model.recordingShortcut || model.recordingActaShortcut { NoticeBox(text: "Press your new shortcut, then release. Escape keeps the current one.") }
+                if let error = model.shortcutError { NoticeBox(text: error, error: true) }
+            }
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Eyebrow(text: "Transcript folder")
+                Text(model.settings.transcriptDirectory.path).font(.system(size: 11)).foregroundStyle(Grafico.muted).textSelection(.enabled)
+                Text("New recordings go into dictado and acta subfolders. Existing files and recordings in progress keep their original location.")
+                    .font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                HStack(spacing: 8) {
+                    Button("Choose…", action: actions.chooseFolder)
+                    Button("Open", action: actions.folder)
+                    Button("Use default", action: actions.resetFolder)
+                }.padding(.bottom, 3)
+                if let error = model.folderError { NoticeBox(text: error, error: true) }
+            }
+            Divider()
             if model.updates.available {
-                Text("Updates").font(.system(size: 15, weight: .semibold))
-                Toggle("Automatically check for updates", isOn: Binding(get: { model.updates.automaticallyChecks }, set: { actions.setUpdateChecks($0) }))
-                Toggle("Download updates automatically", isOn: Binding(get: { model.updates.automaticallyDownloads }, set: { actions.setUpdateDownloads($0) }))
-                    .disabled(!model.updates.automaticallyChecks)
-                Text("Install updates in the app. Recording and unsaved words take priority over restarting.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                if model.updates.waitingForRecording { NoticeBox(text: "An update is ready. Finish or recover your recording before Tapas restarts.") }
-                Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
+                VStack(alignment: .leading, spacing: 12) {
+                    Eyebrow(text: "Updates")
+                    PreferenceToggle("Check automatically", isOn: Binding(get: { model.updates.automaticallyChecks }, set: { actions.setUpdateChecks($0) }))
+                    PreferenceToggle("Download automatically", isOn: Binding(get: { model.updates.automaticallyDownloads }, set: { actions.setUpdateDownloads($0) }))
+                        .disabled(!model.updates.automaticallyChecks)
+                    Text("Install updates in the app. Recording and unsaved words take priority over restarting.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                    if model.updates.waitingForRecording { NoticeBox(text: "An update is ready. Finish or recover your recording before Tapas restarts.") }
+                    Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
+                        .padding(.bottom, 3)
+                }
                 Divider()
             }
-            HStack { Text("Shortcuts & paste access"); Spacer(); Text(model.accessibilityTrusted ? "Allowed" : "Off").foregroundStyle(Grafico.muted) }
-            Text("Accessibility enables global shortcuts and Dictado’s paste. Acta audio has its own permission step.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            Button("Microphone & Accessibility…", action: actions.setup).buttonStyle(.plain)
+            VStack(alignment: .leading, spacing: 8) {
+                Eyebrow(text: "Permissions")
+                Text("Shortcuts & paste access: \(model.accessibilityTrusted ? "allowed" : "off")").fontWeight(.medium)
+                Text("Accessibility enables global shortcuts and Dictado’s paste. Acta audio has its own permission step.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                Button("Microphone & Accessibility…", action: actions.setup).padding(.bottom, 3)
+            }
             Text("25 European languages · automatic\nVoice processing stays on this Mac.").font(.system(size: 11)).lineSpacing(4).foregroundStyle(Grafico.muted)
-            Button("Powered by Desert Ant Labs ↗") { NSWorkspace.shared.open(URL(string: "https://desertant.com")!) }.buttonStyle(.plain).font(.system(size: 11))
-        }.toggleStyle(.switch).tint(Grafico.olive).font(.system(size: 13))
+        }.buttonStyle(GraficoButtonStyle(secondary: true, compact: true))
+            .tint(Grafico.olive).font(.system(size: 13))
+    }
+
+}
+
+private struct PreferenceToggle: View {
+    var title: String
+    var detail: String
+    @Binding var isOn: Bool
+
+    init(_ title: String, detail: String = "", isOn: Binding<Bool>) {
+        self.title = title
+        self.detail = detail
+        self._isOn = isOn
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Toggle(title, isOn: $isOn)
+                .labelsHidden().toggleStyle(.switch).fixedSize()
+                .accessibilityHint(detail)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title).font(.system(size: 13, weight: .medium))
+                if !detail.isEmpty {
+                    Text(detail).font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                }
+            }.padding(.top, 3).frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHidden(true)
+        }
     }
 }
 
