@@ -145,3 +145,49 @@ public struct HotkeyTapper: Sendable {
         return code == hotkey.keyCode
     }
 }
+
+extension Hotkey {
+    public static let actaStandard = Hotkey(keyCode: 46, modifiers: [.control, .shift])
+
+    public var isActaShortcut: Bool {
+        guard let keyCode, !Self.isModifierKey(keyCode), keyCode != 53 else { return false }
+        return modifiers.rawValue.nonzeroBitCount >= 2
+    }
+
+    /// Modifier-only Dictado bindings fire before an extended chord's letter.
+    /// Reject those overlaps as well as identical shortcuts.
+    public func conflicts(with other: Hotkey) -> Bool {
+        if self == other { return true }
+        if isModifierOnly && other.modifiers.isSuperset(of: modifiers) { return true }
+        if other.isModifierOnly && modifiers.isSuperset(of: other.modifiers) { return true }
+        if self == .rightCommand && other.modifiers.contains(.command) { return true }
+        if other == .rightCommand && modifiers.contains(.command) { return true }
+        return false
+    }
+}
+
+/// Wait for release before accepting modifier-only bindings so a recorder can
+/// distinguish Control–Shift from Control–Shift–M.
+public struct HotkeyCapture: Sendable {
+    private var candidate: Hotkey?
+    public init() {}
+    public mutating func flagsChanged(code: UInt16, modifiers: KeyModifiers) -> Hotkey? {
+        if modifiers.isEmpty {
+            defer { candidate = nil }
+            return candidate
+        }
+        if modifiers.rawValue.nonzeroBitCount >= 2 {
+            if candidate == nil || modifiers.rawValue.nonzeroBitCount > candidate!.modifiers.rawValue.nonzeroBitCount {
+                candidate = Hotkey(modifiers: modifiers)
+            }
+        } else if code == 54, modifiers == .command, candidate == nil {
+            candidate = .rightCommand
+        }
+        return nil
+    }
+    public mutating func keyDown(code: UInt16, modifiers: KeyModifiers) -> Hotkey? {
+        guard !Hotkey.isModifierKey(code), !modifiers.isEmpty else { return nil }
+        candidate = nil
+        return Hotkey(keyCode: code, modifiers: modifiers)
+    }
+}

@@ -30,6 +30,7 @@ public struct TapasSettings: Equatable, Sendable {
     public var historyEnabled: Bool
     public var meetingPromptsEnabled: Bool
     public var historyDirectory: URL
+    public var actaHotkey: Hotkey
     public var hotkey: Hotkey
 
     public init(
@@ -37,14 +38,23 @@ public struct TapasSettings: Equatable, Sendable {
         historyEnabled: Bool = true,
         meetingPromptsEnabled: Bool = true,
         historyDirectory: URL = Self.defaultHistoryDirectory,
+        actaHotkey: Hotkey = .actaStandard,
         hotkey: Hotkey = .standard
     ) {
         self.overlayEnabled = overlayEnabled
         self.historyEnabled = historyEnabled
         self.meetingPromptsEnabled = meetingPromptsEnabled
         self.historyDirectory = historyDirectory
+        self.actaHotkey = actaHotkey
         self.hotkey = hotkey
     }
+
+    public var transcriptDirectory: URL {
+        get { historyDirectory.deletingLastPathComponent() }
+        set { historyDirectory = newValue.appendingPathComponent("dictado", isDirectory: true) }
+    }
+
+    public var actaDirectory: URL { transcriptDirectory.appendingPathComponent("acta", isDirectory: true) }
 
     public static var defaultHistoryDirectory: URL {
         FileManager.default.homeDirectoryForCurrentUser

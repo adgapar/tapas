@@ -8,10 +8,17 @@ final class HotkeyMonitor: @unchecked Sendable {
     nonisolated(unsafe) static var shared: HotkeyMonitor?
 
     var onCancel: (@Sendable () -> Void)?
+    var onActa: (@Sendable () -> Void)?
     var onTap: (@Sendable () -> Void)?
     var onRecorded: (@Sendable (Hotkey) -> Void)?
     var onRecordCancelled: (@Sendable () -> Void)?
-    var recording = false
+    var recording = false { didSet { captureState = HotkeyCapture(); resetTappers() } }
+    var actaHotkey: Hotkey = .actaStandard
+    private var captureState = HotkeyCapture()
+    private var consumedKeys: Set<UInt16> = []
+    private func resetTappers() {
+        tapper = HotkeyTapper(hotkey: hotkey)
+    }
 
     var hotkey: Hotkey = .standard {
         didSet { tapper = HotkeyTapper(hotkey: hotkey) }
@@ -33,7 +40,7 @@ final class HotkeyMonitor: @unchecked Sendable {
         HotkeyMonitor.shared = self
         if localMonitor != nil { return }
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp, .flagsChanged]) { [weak self] event in
-            if self?.tapRunning == false { self?.handleNSEvent(event) }
+            if self?.tapRunning == false, self?.handleNSEvent(event) == true { return nil }
             return event
         }
     }
@@ -61,11 +68,12 @@ final class HotkeyMonitor: @unchecked Sendable {
             tap: .cgSessionEventTap,
             place: .headInsertEventTap,
             // Use the Accessibility permission requested by setup. A listen-only tap
-            // uses Input Monitoring authorization instead. Pass every event through.
+            // uses Input Monitoring authorization instead. Consume only recorded or Acta shortcut keys.
             options: .defaultTap,
             eventsOfInterest: CGEventMask(mask),
             callback: { _, type, event, _ in
-                HotkeyMonitor.shared?.handle(type: type, event: event) ?? Unmanaged.passUnretained(event)
+                guard let monitor = HotkeyMonitor.shared else { return Unmanaged.passUnretained(event) }
+                return monitor.handle(type: type, event: event)
             },
             userInfo: nil
         ) else {
@@ -88,7 +96,7 @@ final class HotkeyMonitor: @unchecked Sendable {
         }
     }
 
-    private func handleNSEvent(_ event: NSEvent) {
+    private func handleNSEvent(_ event: NSEvent) -> Bool {
         let code = UInt16(event.keyCode)
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let modifiers = KeyModifiers.from(
@@ -102,9 +110,9 @@ final class HotkeyMonitor: @unchecked Sendable {
         case .keyDown: type = .keyDown
         case .keyUp: type = .keyUp
         case .flagsChanged: type = .flagsChanged
-        default: return
+        default: return false
         }
-        _ = consider(type: type, code: code, modifiers: modifiers, isRepeat: event.type == .keyDown && event.isARepeat)
+        return consider(type: type, code: code, modifiers: modifiers, isRepeat: event.type == .keyDown && event.isARepeat)
     }
 
     private func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -121,26 +129,35 @@ final class HotkeyMonitor: @unchecked Sendable {
             shift: event.flags.contains(.maskShift),
             command: event.flags.contains(.maskCommand)
         )
-        _ = consider(type: type, code: code, modifiers: modifiers, isRepeat: isRepeat)
+        if consider(type: type, code: code, modifiers: modifiers, isRepeat: isRepeat) { return nil }
         return Unmanaged.passUnretained(event)
     }
 
     @discardableResult
-    private func consider(type: CGEventType, code: UInt16, modifiers: KeyModifiers, isRepeat: Bool) -> Bool {
+    func consider(type: CGEventType, code: UInt16, modifiers: KeyModifiers, isRepeat: Bool) -> Bool {
+        if type == .keyUp, consumedKeys.remove(code) != nil { return true }
+        if type == .keyDown, consumedKeys.contains(code) { return true }
         if recording {
             if code == 53, type == .keyDown {
+                consumedKeys.insert(code)
                 recording = false
                 onRecordCancelled?()
                 return true
             }
             if let captured = capture(type: type, code: code, modifiers: modifiers) {
+                if type == .keyDown { consumedKeys.insert(code) }
                 recording = false
                 onRecorded?(captured)
                 return true
             }
-            return false
+            return type == .keyDown || type == .keyUp
         }
 
+        if type == .keyDown, !isRepeat, code == actaHotkey.keyCode, modifiers == actaHotkey.modifiers {
+            consumedKeys.insert(code)
+            onActa?()
+            return true
+        }
         if code == 53, type == .keyDown, !isRepeat { onCancel?(); return false }
         let toggled: Bool
         switch type {
@@ -180,15 +197,8 @@ final class HotkeyMonitor: @unchecked Sendable {
     }
 
     private func capture(type: CGEventType, code: UInt16, modifiers: KeyModifiers) -> Hotkey? {
-        if code == 54, type == .flagsChanged, modifiers.contains(.command) {
-            return .rightCommand
-        }
-        if type == .flagsChanged, modifiers.rawValue.nonzeroBitCount >= 2 {
-            return Hotkey(keyCode: nil, modifiers: modifiers)
-        }
-        if type == .keyDown, !Hotkey.isModifierKey(code), !modifiers.isEmpty {
-            return Hotkey(keyCode: code, modifiers: modifiers)
-        }
+        if type == .flagsChanged { return captureState.flagsChanged(code: code, modifiers: modifiers) }
+        if type == .keyDown { return captureState.keyDown(code: code, modifiers: modifiers) }
         return nil
     }
 }

@@ -7,31 +7,19 @@ struct ActaView: View {
     let controller: ActaController
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 7) {
-                    Eyebrow(text: "A little room for the conversation")
-                    Text("Acta").font(.system(size: 34, weight: .bold)).tracking(-1)
-                    Text("Be there. Keep the conversation.").font(.system(size: 14, design: .serif)).italic()
-                }
-                Spacer()
-                PintxoMark(phase: model.snapshot.phase == .recording ? .listening : .idle).frame(width: 48, height: 68)
-            }.padding(26)
-            Divider()
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    if let error = model.error { NoticeBox(text: error, error: true) }
-                    if let message = model.snapshot.message { NoticeBox(text: message, error: model.snapshot.phase == .recovery) }
-                    if model.snapshot.phase == .idle { preflight }
-                    else { meeting }
-                }.padding(26).frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }.frame(width: 540, height: 650).background(Grafico.card).foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack { ToolGlyph(symbol: "text.bubble", color: Grafico.cobalt); Spacer(); Eyebrow(text: "Meeting notes") }
+            Text("Acta").font(.system(size: 30, weight: .bold)).tracking(-1)
+            Text("Be there. Keep the conversation.").font(.system(size: 13, design: .serif)).italic()
+            if let error = model.error { NoticeBox(text: error, error: true) }
+            if let message = model.snapshot.message { NoticeBox(text: message, error: model.snapshot.phase == .recovery) }
+            if model.snapshot.phase == .idle { preflight } else { meeting }
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var preflight: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Record your microphone and one app on this Mac. Choose your browser for a web meeting; audio from its other tabs may also be captured.").font(.system(size: 13)).lineSpacing(4)
+            Text("Your microphone captures you. Choose where the other voices come from—for example, Zoom or the browser running your meeting.").font(.system(size: 13)).lineSpacing(4)
             if !model.ready {
                 NoticeBox(text: "Prepare the voice models in Setup before your first meeting.")
                 Button("Open Setup", action: controller.onSetup).buttonStyle(GraficoButtonStyle())
@@ -43,18 +31,26 @@ struct ActaView: View {
                 else { Button("Allow microphone") { Task { await controller.allowMicrophone() } } }
             }.font(.system(size: 12))
             Divider()
-            Text("Meeting app").font(.system(size: 13, weight: .medium))
+            Text("Where is your meeting?").font(.system(size: 13, weight: .medium))
             if !model.apps.isEmpty {
-                Picker("Meeting app", selection: $model.selectedApp) {
+                Picker("Meeting audio source", selection: $model.selectedApp) {
+                    Text("Choose an app…").tag(Optional<Int32>.none)
                     ForEach(model.apps) { app in Text(app.name).tag(Optional(app.id)) }
                 }.labelsHidden().frame(maxWidth: .infinity)
             }
-            Button(model.apps.isEmpty ? "Allow app audio & load apps" : "Refresh apps") { Task { await controller.loadApps() } }.disabled(model.busy)
-            Text("macOS may request Screen & System Audio Recording access. Acta keeps audio only.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            if model.appAudioGranted {
+                Label("App audio allowed", systemImage: "checkmark.circle").font(.system(size: 12)).foregroundStyle(Grafico.olive)
+                Button("Refresh apps") { Task { await controller.loadApps() } }.disabled(model.busy)
+            } else {
+                Text("Allow meeting audio to see available apps.").font(.system(size: 12))
+                Button("Allow meeting audio") { Task { await controller.allowAppAudio() } }.buttonStyle(GraficoButtonStyle(secondary: true)).disabled(model.busy)
+                Button("Open System Settings", action: controller.openAppAudioSettings).buttonStyle(.plain)
+            }
+            Text("macOS calls this Screen & System Audio Recording. Acta records audio only; it does not save screen images. If you choose a browser, other tabs’ audio may be included.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             Button { Task { await controller.start() } } label: {
                 HStack { Text(model.busy ? "Preparing…" : "Start Acta"); Spacer(); Image(systemName: "arrow.right") }
-            }.buttonStyle(GraficoButtonStyle()).disabled(model.busy || !model.ready || !model.microphoneGranted || model.selectedApp == nil)
-            Text("Start when everyone is ready to be recorded.\nFull transcripts are saved locally in Documents/tapas/acta. Temporary recovery audio is removed after a successful save.")
+            }.buttonStyle(GraficoButtonStyle()).disabled(model.busy || !model.ready || !model.microphoneGranted || !model.appAudioGranted || model.selectedApp == nil)
+            Text("Start when everyone is ready to be recorded.\nTranscripts use your shared folder in Preferences. Temporary recovery audio is removed after a successful save.")
                 .font(.system(size: 11)).foregroundStyle(Grafico.muted).lineSpacing(4)
         }
     }
@@ -80,7 +76,7 @@ struct ActaView: View {
                     }
                     Button("Finish & save") { Task { await controller.finish() } }.buttonStyle(GraficoButtonStyle())
                 }.disabled(model.busy)
-                Text("Closing this window keeps the meeting companion visible. Recorded time excludes pauses.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                Text("You can return to All tools while recording. A floating companion stays visible when you leave Acta. Recorded time excludes pauses.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             }
             if model.snapshot.phase == .finishing {
                 ProgressView().controlSize(.small)
@@ -139,24 +135,36 @@ struct ActaCompanion: View {
     @Bindable var model: ActaModel
     let controller: ActaController
     var body: some View {
-        HStack(spacing: 14) {
-            PintxoMark(phase: model.snapshot.phase == .recording ? .listening : .idle).frame(width: 42, height: 65)
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Acta · \(ActaDocument.timestamp(model.elapsed))").font(.system(size: 13, weight: .semibold, design: .monospaced))
-                Text(model.status).font(.system(size: 10)).lineLimit(1)
-                if model.snapshot.phase == .recording {
-                    Text("Mic: \(model.microphoneSeen ? "connected" : "waiting") · App: \(model.appSeen ? "connected" : "waiting")")
-                        .font(.system(size: 9)).foregroundStyle(Grafico.muted)
-                }
-                HStack(spacing: 14) {
-                    Button("Open ↗", action: controller.show)
-                    if model.snapshot.phase == .recording { Button("Pause") { Task { await controller.pause() } } }
-                    else if model.canResume { Button("Resume") { Task { await controller.resume() } } }
-                    if [.recording, .paused, .recovery].contains(model.snapshot.phase) { Button("Finish") { Task { await controller.finish() } } }
-                }.font(.system(size: 11)).buttonStyle(.plain).disabled(model.busy)
-            }
+        VStack(alignment: .trailing, spacing: 10) {
             Spacer(minLength: 0)
-        }.padding(16).frame(width: 330, height: 116).background(Grafico.paper, in: RoundedRectangle(cornerRadius: 16))
-            .foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+            if model.companionExpanded || model.snapshot.phase == .recovery || model.error != nil || model.snapshot.message != nil {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        TapasWordmark(size: 23)
+                        Spacer()
+                        if model.snapshot.phase == .saved { ClosePlateButton(label: "Dismiss saved receipt", action: controller.dismissReceipt) }
+                    }
+                    Text(model.status).font(.system(size: 14, weight: .semibold))
+                    if let message = model.error ?? model.snapshot.message {
+                        Text(message).font(.system(size: 11)).fixedSize(horizontal: false, vertical: true)
+                    }
+                    HStack(spacing: 15) {
+                        Button(model.snapshot.phase == .saved ? "View transcript ↗" : "Open Acta ↗", action: controller.show)
+                        if model.snapshot.phase == .recording { Button("Pause") { Task { await controller.pause() } } }
+                        else if model.canResume { Button("Resume") { Task { await controller.resume() } } }
+                        if [.recording, .paused, .recovery].contains(model.snapshot.phase) { Button("Finish") { Task { await controller.finish() } } }
+                    }.font(.system(size: 11)).buttonStyle(.plain).disabled(model.busy)
+                }.plateSurface()
+            }
+            Button { model.companionExpanded.toggle() } label: {
+                HStack(spacing: 8) {
+                    VStack(alignment: .trailing, spacing: 5) {
+                        Text(model.snapshot.phase == .recording ? "Recording" : model.status).font(.system(size: 11, weight: .medium))
+                        Text(ActaDocument.timestamp(model.elapsed)).font(.system(size: 12, design: .monospaced))
+                    }.padding(10).background(Grafico.card, in: Capsule())
+                    PintxoWaveform(recording: model.snapshot.phase == .recording, level: max(model.microphoneLevel, model.appLevel))
+                }
+            }.buttonStyle(.plain).accessibilityLabel("Acta, \(model.status). Toggle recording controls.")
+        }.padding(10).frame(width: 340, height: 320).foregroundStyle(Grafico.ink).preferredColorScheme(.light)
     }
 }

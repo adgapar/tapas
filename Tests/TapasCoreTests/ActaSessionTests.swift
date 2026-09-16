@@ -194,3 +194,49 @@ private struct ActaFixture {
     #expect(await session.snapshot().phase == .saved)
     #expect(await session.snapshot().document?.segments.count == 1)
 }
+
+@Test func actaRecoveryRetainsOriginalFolderAfterPreferenceChange() async throws {
+    let fixture = ActaFixture(); defer { fixture.cleanup() }
+    let first = fixture.makeSession()
+    try await first.start(appName: "Meet")
+    await first.pause(duration: 1)
+    let next = fixture.root.appendingPathComponent("new-folder")
+    await first.setOutputDirectory(next)
+    // A restarted app has the new preference, but the checkpoint has the take's destination.
+    let restored = fixture.makeSession()
+    await restored.setOutputDirectory(next)
+    try await restored.recover()
+    await restored.finish()
+    #expect(await restored.snapshot().savedURL?.deletingLastPathComponent().path == fixture.output.path)
+    #expect(!FileManager.default.fileExists(atPath: next.path))
+    try await restored.newMeeting()
+    try await restored.start(appName: "Next")
+    await restored.pause(duration: 1)
+    await restored.finish()
+    #expect(await restored.snapshot().savedURL?.deletingLastPathComponent().path == next.path)
+}
+
+@Test func oldActaCheckpointsWithoutFolderStillDecode() throws {
+    let encoded = try JSONEncoder().encode(ActaDocument(appName: "Meet"))
+    var json = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+    json.removeValue(forKey: "outputDirectory")
+    let document = try JSONDecoder().decode(ActaDocument.self, from: JSONSerialization.data(withJSONObject: json))
+    #expect(document.outputDirectory == nil)
+    #expect(document.appName == "Meet")
+}
+
+@Test func legacyRecoveryKeepsTheOriginalDefaultDestination() async throws {
+    let fixture = ActaFixture(); defer { fixture.cleanup() }
+    let session = fixture.makeSession()
+    try await session.start(appName: "Legacy")
+    await session.pause(duration: 1)
+    let document = try #require(await session.snapshot().document)
+    let checkpoint = fixture.recovery.appendingPathComponent(document.id.uuidString).appendingPathComponent("session.json")
+    var json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: checkpoint)) as? [String: Any])
+    json.removeValue(forKey: "outputDirectory")
+    try JSONSerialization.data(withJSONObject: json).write(to: checkpoint)
+    let restored = fixture.makeSession()
+    await restored.setOutputDirectory(fixture.root.appendingPathComponent("new-preference"))
+    try await restored.recover()
+    #expect(await restored.snapshot().document?.outputDirectory == TapasSettings().actaDirectory)
+}

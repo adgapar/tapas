@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreGraphics
 import SwiftUI
 import TapasCore
 
@@ -11,6 +12,7 @@ final class ActaModel {
     var busy = false
     var ready = false
     var microphoneGranted = false
+    var appAudioGranted = false
     var error: String?
     var elapsed: Double = 0
     var microphoneLevel: Double = 0
@@ -18,6 +20,9 @@ final class ActaModel {
     var microphoneSeen = false
     var appSeen = false
     var canResume = false
+    var outputDirectory = TapasSettings().actaDirectory
+    var companionExpanded = false
+    var receiptVisible = false
     var hasSession: Bool { snapshot.phase != .idle && snapshot.phase != .saved }
     var status: String {
         switch snapshot.phase {
@@ -36,15 +41,21 @@ final class ActaController: NSObject, NSWindowDelegate {
     let model = ActaModel()
     private var session: ActaSession?
     private let recorder = ActaRecorder()
-    private var window: NSWindow?
+    var onShow: () -> Void = {}
+    var isPresented: () -> Bool = { false }
     private var companion: NSPanel?
     private var source: ActaAppSource?
+    private var suggestedPID: Int32?
     private var captureFailure: String?
+    var permissionStatus: () -> (microphone: Bool, appAudio: Bool) = {
+        (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized, CGPreflightScreenCaptureAccess())
+    }
     var dictadoIsBusy: () -> Bool = { false }
     var onSaved: () -> Void = {}
     var onSetup: () -> Void = {}
 
     func configure(pipeline: TranscriptionPipeline, root: URL) async {
+        model.outputDirectory = root.appendingPathComponent("acta", isDirectory: true)
         let recovery = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Tapas/ActaRecovery", isDirectory: true)
         let session = ActaSession(pipeline: pipeline, recoveryRoot: recovery, outputDirectory: root.appendingPathComponent("acta", isDirectory: true))
@@ -55,55 +66,70 @@ final class ActaController: NSObject, NSWindowDelegate {
         await refresh()
     }
 
-    var isWindowVisible: Bool { window?.isVisible == true && window?.isMiniaturized != true }
+    func setOutputDirectory(_ directory: URL) async {
+        model.outputDirectory = directory
+        await session?.setOutputDirectory(directory)
+    }
+
+    var isWindowVisible: Bool { isPresented() }
 
     /// Called only by the explicit Start Acta action in the microphone prompt.
     /// Match the detected process again; never fall back to recording a different app.
     func startSuggested(_ app: MicrophoneApp) async {
         guard !model.busy else { return }
         if model.snapshot.phase == .saved { await newMeeting() }
-        show()
-        guard !model.hasSession else { return }
+        refreshPermissions()
+        suggestedPID = app.pid
+        guard !model.hasSession else { show(); return }
+        guard model.ready, model.microphoneGranted, model.appAudioGranted else { show(); return }
         await loadApps()
-        guard let selected = model.apps.first(where: { $0.id == app.pid }) else {
-            model.selectedApp = nil
-            if model.error == nil { model.error = "The detected app is no longer available. Choose a meeting app to continue." }
+        guard model.selectedApp == app.pid else {
+            model.error = "The detected app is no longer available. Choose a meeting app to continue."
+            onShow()
             return
         }
-        model.selectedApp = selected.id
-        guard model.ready else { return }
-        if !model.microphoneGranted {
-            model.busy = true
-            await allowMicrophone()
-            model.busy = false
-        }
-        guard model.microphoneGranted else { return }
         await start()
     }
 
     func show() {
-        if window == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 540, height: 650), styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
-            window.title = "Acta · Tapas"
-            window.isReleasedWhenClosed = false
-            window.delegate = self
-            window.contentView = NSHostingView(rootView: ActaView(model: model, controller: self))
-            window.center()
-            self.window = window
-        }
-        NSApp.activate(ignoringOtherApps: true)
-        window?.makeKeyAndOrderFront(nil)
+        model.receiptVisible = false
+        refreshPermissions()
+        onShow()
         companion?.orderOut(nil)
+        if model.appAudioGranted { Task { await loadApps() } }
+    }
+
+    func refreshPermissions() {
+        let status = permissionStatus()
+        model.microphoneGranted = status.microphone
+        model.appAudioGranted = status.appAudio
+    }
+
+    func allowAppAudio() async {
+        guard !model.busy, !model.hasSession else { return }
+        model.appAudioGranted = CGRequestScreenCaptureAccess()
+        if model.appAudioGranted { await loadApps() }
+        else { model.error = "Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording. If macOS asks you to reopen Tapas, do so, then return to Acta." }
+    }
+
+    func openAppAudioSettings() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
     }
 
     func loadApps() async {
         guard !model.busy, !model.hasSession else { return }
+        refreshPermissions()
+        guard model.appAudioGranted else { return }
         model.busy = true
         model.error = nil
         defer { model.busy = false }
         do {
             model.apps = try await ActaRecorder.sources()
-            if !model.apps.contains(where: { $0.id == model.selectedApp }) { model.selectedApp = model.apps.first?.id }
+            if let suggestedPID, model.apps.contains(where: { $0.id == suggestedPID }) {
+                model.selectedApp = suggestedPID
+                self.suggestedPID = nil
+            }
+            if !model.apps.contains(where: { $0.id == model.selectedApp }) { model.selectedApp = nil }
             if model.apps.isEmpty { model.error = "Open your meeting app, then refresh this list." }
         } catch {
             model.error = "App audio access is unavailable. Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording, then refresh. macOS may ask you to reopen Tapas."
@@ -118,13 +144,16 @@ final class ActaController: NSObject, NSWindowDelegate {
     func start() async {
         guard !model.busy, model.ready, let session, !model.hasSession else { return }
         guard !dictadoIsBusy() else { model.error = "Finish your Dictado take or setup before starting Acta."; return }
-        guard let app = model.apps.first(where: { $0.id == model.selectedApp }), model.microphoneGranted else { return }
+        guard let app = model.apps.first(where: { $0.id == model.selectedApp }), model.microphoneGranted, model.appAudioGranted else { return }
         model.busy = true
         model.error = nil
         captureFailure = nil
         model.elapsed = 0
+        model.receiptVisible = false
+        model.companionExpanded = false
         defer { model.busy = false }
         do {
+            await session.setOutputDirectory(model.outputDirectory)
             try await session.start(appName: app.name)
             source = app
             try await recorder.start(app: app, session: session, offset: 0)
@@ -183,8 +212,12 @@ final class ActaController: NSObject, NSWindowDelegate {
         model.snapshot.phase = .finishing
         await session.finish()
         await refresh()
-        if model.snapshot.phase == .saved { onSaved() }
-        show()
+        if model.snapshot.phase == .saved {
+            onSaved()
+            model.receiptVisible = !isPresented()
+            model.companionExpanded = true
+        }
+        updateCompanion()
     }
 
     func refresh() async {
@@ -209,21 +242,28 @@ final class ActaController: NSObject, NSWindowDelegate {
     }
 
     private func updateCompanion() {
-        guard model.hasSession, window?.isVisible != true || window?.isMiniaturized == true else { companion?.orderOut(nil); return }
+        guard model.hasSession || model.receiptVisible, !isPresented() else { companion?.orderOut(nil); return }
         if companion == nil {
-            let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 330, height: 116), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+            let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 340, height: 320), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
             panel.isReleasedWhenClosed = false
             panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.isMovableByWindowBackground = true
             panel.backgroundColor = .clear
             panel.isOpaque = false
-            panel.hasShadow = true
+            panel.hasShadow = false
             panel.contentView = NSHostingView(rootView: ActaCompanion(model: model, controller: self))
-            if let screen = NSScreen.main { panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - 350, y: screen.visibleFrame.maxY - 140)) }
+            if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
+                panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - 360, y: screen.visibleFrame.minY + 24))
+            }
             companion = panel
         }
         companion?.orderFrontRegardless()
+    }
+
+    func dismissReceipt() {
+        model.receiptVisible = false
+        updateCompanion()
     }
 
     func discard() async {

@@ -9,9 +9,9 @@
 	<key>CFBundleIdentifier</key>
 	<string>work.tapas.Tapas</string>
 	<key>CFBundleVersion</key>
-	<string>4</string>
+	<string>5</string>
 	<key>CFBundleShortVersionString</key>
-	<string>0.1.1</string>
+	<string>0.1.2</string>
 	<key>CFBundleIconFile</key>
 	<string>Tapas.icns</string>
 	<key>CFBundleExecutable</key>
@@ -24,6 +24,8 @@
 	<false/>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>NSScreenCaptureUsageDescription</key>
+	<string>Acta captures audio from your selected meeting app to transcribe conversations on this Mac. Screen images are not saved.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Tapas uses the microphone for dictation and meeting transcripts. Audio stays on this Mac.</string>
 	<key>SUFeedURL</key>

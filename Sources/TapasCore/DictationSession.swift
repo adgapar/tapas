@@ -37,7 +37,8 @@ public actor DictationSession {
     public static let minimumDuration: TimeInterval = 0.25
     private let pipeline: TranscriptionPipeline
     private let paster: any TextPaster
-    private let history: HistoryWriter
+    private var history: HistoryWriter
+    private var takeHistory: HistoryWriter?
     private let models: any ModelCatalog
     private let microphone: any Microphone
     private let now: @Sendable () -> Date
@@ -71,6 +72,7 @@ public actor DictationSession {
 
     public func snapshot() -> OverlaySnapshot { overlay }
     public func setHistoryEnabled(_ enabled: Bool) { historyEnabled = enabled }
+    public func setHistoryDirectory(_ directory: URL) { history.directory = directory }
 
     public func toggle() async {
         guard !toggling, !cancelling else { return }
@@ -82,6 +84,7 @@ public actor DictationSession {
         guard !overlay.phase.isActive else { return }
         generation += 1
         let take = generation
+        takeHistory = history
         overlay = OverlaySnapshot(isVisible: true, phase: .starting)
         guard await models.isReady else {
             guard generation == take else { return }
@@ -199,7 +202,7 @@ public actor DictationSession {
     private func saveRecord() async {
         guard let pendingRecord, overlay.historyURL == nil else { return }
         do {
-            overlay.historyURL = try await history.write(pendingRecord)
+            overlay.historyURL = try await (takeHistory ?? history).write(pendingRecord)
             overlay.saveFailed = false
         } catch { overlay.saveFailed = true }
     }

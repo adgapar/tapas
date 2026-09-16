@@ -8,6 +8,11 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     var onDismissed: (() -> Void)?
     var allowMicrophone: (() async -> Bool)?
     var microphoneGranted: (() async -> Bool)?
+    var allowAppAudio: (() async -> Void)?
+    var appAudioGranted: (() -> Bool)?
+    var chooseFolder: (() -> Void)?
+    var defaultFolder: (() -> Void)?
+    var onStageChanged: ((Int) -> Void)?
     var openAccessibility: (() -> Void)?
     var retryAccessibility: (() -> (trusted: Bool, tapStarted: Bool))?
     var pollAccessibility: (() -> (trusted: Bool, tapStarted: Bool))?
@@ -24,14 +29,16 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
 
     init(flow: SetupFlow) {
         model = SetupModel(flow: flow)
-        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 560),
-                              styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
+        let window = FloatingWindow(contentRect: NSRect(x: 0, y: 0, width: 920, height: 730),
+                                    styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
+        configureFloatingWindow(window)
         super.init(window: window)
         window.title = "A first taste of Tapas"
         window.isReleasedWhenClosed = false
         window.delegate = self
-        window.contentViewController = NSHostingController(rootView: SetupView(
-            model: model,
+        let setupModel = model
+        window.contentViewController = NSHostingController(rootView: FittedSurface(width: 920, height: 730) { SetupView(
+            model: setupModel,
             onPrimary: { [weak self] in await self?.primary() },
             onSecondary: { [weak self] in self?.openAccessibility?() },
             onSkip: { [weak self] in self?.window?.close() },
@@ -39,8 +46,14 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onCancel: { [weak self] in self?.onCancel?() },
             onHotkey: { [weak self] value in self?.onHotkey?(value) },
             onRecheckAccessibility: { [weak self] in self?.recheckAccessibility() },
-            onRevealApplication: { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) }
-        ))
+            onRevealApplication: { NSWorkspace.shared.activateFileViewerSelecting([Bundle.main.bundleURL]) },
+            onBack: { [weak self] in self?.back() },
+            onMicrophone: { [weak self] in await self?.requestMicrophone() },
+            onAppAudio: { [weak self] in await self?.allowAppAudio?() },
+            onChooseFolder: { [weak self] in self?.chooseFolder?() },
+            onDefaultFolder: { [weak self] in self?.defaultFolder?() },
+            onPrepare: { [weak self] in await self?.prepare() }
+        ) })
         window.appearance = NSAppearance(named: .aqua)
         window.center()
     }
@@ -49,6 +62,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     required init?(coder: NSCoder) { nil }
 
     func show() {
+        if let window { placeFloatingWindow(window, preferred: NSSize(width: 920, height: 730)) }
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         pollTask?.cancel()
@@ -65,7 +79,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
 
     private func recheckAccessibility() {
-        guard model.flow.phase == .accessibility else { return }
+        guard model.stage == 1 else { return }
         model.accessibilityChecked = true
         if let status = retryAccessibility?() ?? pollAccessibility?() {
             model.flow.accessibilityTrusted = status.trusted
@@ -79,48 +93,49 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             model.flow.accessibilityTrusted = trusted
             model.flow.tapStarted = running
         }
+        model.appAudioGranted = appAudioGranted?() ?? false
         model.flow.modelsReady = modelsReady?() ?? false
         if model.downloading, let downloadFraction { model.flow.downloadFraction = await downloadFraction() }
         if model.flow.phase == .tryIt, let snap = await practiceSnapshot?() {
             model.phase = snap.phase
+            model.level = min(1, Double(snap.rms) * 8)
             if !snap.committedText.isEmpty { model.practiceText = snap.committedText }
             if snap.phase == .delivered { model.completedPractice = true }
             model.flow.modelError = snap.phase == .failed || snap.phase == .recovery ? snap.message : nil
         }
     }
 
-    private func primary() async {
-        guard !model.busy else { return }
-        switch model.flow.phase {
-        case .peek:
-            UserDefaults.standard.set(true, forKey: "setupWelcomeSeen")
-            model.flow.advance()
-        case .microphone:
-            model.busy = true
-            model.flow.microphoneGranted = await allowMicrophone?() ?? false
-            model.busy = false
-            if model.flow.microphoneGranted {
-                model.flow.modelError = nil
-                model.flow.advance()
-            } else {
-                model.flow.modelError = "Microphone access is off. Enable Tapas in Privacy & Security → Microphone, then return here."
-            }
-        case .accessibility:
-            recheckAccessibility()
-            model.flow.modelError = nil
-            model.flow.advance()
-        case .kitchen:
-            if model.flow.modelsReady { model.flow.advance() }
-            else { await prepare() }
-        case .tryIt:
-            guard model.completedPractice, !model.phase.isActive else { return }
-            model.flow.advance()
-        case .finished:
+    func setStage(_ stage: Int) {
+        model.stage = min(3, max(0, stage))
+        model.flow.phase = [SetupPhase.peek, .microphone, .kitchen, .tryIt][model.stage]
+        model.flow.modelError = nil
+        onStageChanged?(model.stage)
+    }
+
+    func back() {
+        guard !model.phase.isActive, !model.busy else { return }
+        setStage(model.stage - 1)
+    }
+
+    func primary() async {
+        guard !model.busy, !model.phase.isActive else { return }
+        if model.stage == 2 && !model.folderConfirmed { return }
+        if model.stage == 3 {
+            model.flow.phase = .finished
             reportCompletionIfNeeded()
             window?.close()
+        } else {
+            UserDefaults.standard.set(true, forKey: "setupWelcomeSeen")
+            setStage(model.stage + 1)
         }
-        reportCompletionIfNeeded()
-        if model.flow.phase == .kitchen, !model.flow.modelsReady, model.flow.modelError == nil { await prepare() }
+    }
+
+    private func requestMicrophone() async {
+        guard !model.busy else { return }
+        model.busy = true
+        model.flow.microphoneGranted = await allowMicrophone?() ?? false
+        model.busy = false
+        model.flow.modelError = model.flow.microphoneGranted ? nil : "Allow Tapas in System Settings → Privacy & Security → Microphone, then return here."
     }
 
     private func prepare() async {
@@ -139,7 +154,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func handleTalk() async {
-        guard model.flow.phase == .tryIt, !model.busy else { return }
+        guard model.stage == 3, model.flow.modelsReady, model.flow.microphoneGranted, !model.busy else { return }
         model.busy = true
         defer { model.busy = false }
         if model.phase != .listening { model.practiceText = ""; model.completedPractice = false }

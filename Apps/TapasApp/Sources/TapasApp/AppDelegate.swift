@@ -33,12 +33,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         model.settings.overlayEnabled = defaults.object(forKey: "overlayEnabled") as? Bool ?? true
         model.settings.historyEnabled = defaults.object(forKey: "historyEnabled") as? Bool ?? true
         if let data = defaults.data(forKey: "hotkey"), let value = try? JSONDecoder().decode(Hotkey.self, from: data) { model.settings.hotkey = value }
+        if let path = defaults.string(forKey: "transcriptDirectory") { model.settings.transcriptDirectory = URL(fileURLWithPath: path, isDirectory: true) }
+        if let data = defaults.data(forKey: "actaHotkey"), let value = try? JSONDecoder().decode(Hotkey.self, from: data), value.isActaShortcut { model.settings.actaHotkey = value }
+        if model.settings.hotkey.conflicts(with: model.settings.actaHotkey) {
+            model.settings.actaHotkey = [Hotkey.actaStandard, Hotkey(keyCode: 46, modifiers: [.option, .command]), Hotkey(keyCode: 46, modifiers: [.shift, .option])].first { !$0.conflicts(with: model.settings.hotkey) } ?? .actaStandard
+        }
+        acta.model.outputDirectory = model.settings.actaDirectory
+        hotkey.actaHotkey = model.settings.actaHotkey
         hotkey.hotkey = model.settings.hotkey
         overlay.model.shortcut = model.settings.hotkey.label
         hotkey.onTap = { [weak self] in Task { await self?.talk() } }
         hotkey.onCancel = { [weak self] in Task { await self?.cancel() } }
-        hotkey.onRecorded = { [weak self] value in Task { @MainActor in self?.applyHotkey(value) } }
-        hotkey.onRecordCancelled = { [weak self] in Task { @MainActor in self?.model.recordingShortcut = false } }
+        hotkey.onActa = { [weak self] in Task { @MainActor in self?.acta.show() } }
+        hotkey.onRecorded = { [weak self] value in Task { @MainActor in
+            guard let self else { return }
+            if self.model.recordingActaShortcut { self.applyActaHotkey(value) } else { self.applyHotkey(value) }
+        } }
+        hotkey.onRecordCancelled = { [weak self] in Task { @MainActor in self?.finishShortcutRecording() } }
         hotkey.installLocalMonitor()
         acta.dictadoIsBusy = { [weak self] in
             guard let self else { return true }
@@ -48,24 +59,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         acta.onSetup = { [weak self] in self?.presentSetup() }
         let actions = makeActions()
         overlay.configure(actions: actions)
-        menu = MenuBarController(model: model, actions: actions)
+        menu = MenuBarController(model: model, actions: actions, actaController: acta)
         menu?.onOpen = { [weak self] in
+            self?.acta.dismissReceipt()
+            self?.acta.refreshPermissions()
             self?.rememberApplication()
             self?.reloadHistory()
+        }
+        acta.onShow = { [weak self] in
+            self?.model.tab = "Tools"
+            self?.model.selectedTool = "Acta"
+            self?.menu?.showHome()
+        }
+        acta.isPresented = { [weak self] in
+            guard let self else { return false }
+            return model.tab == "Tools" && model.selectedTool == "Acta" && menu?.isShown == true
         }
         rememberApplication()
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main) { [weak self] note in
             guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
             Task { @MainActor in
                 if app.processIdentifier != ProcessInfo.processInfo.processIdentifier { self?.previousApplication = app }
+                else {
+                    self?.acta.refreshPermissions()
+                    if self?.acta.isWindowVisible == true { await self?.acta.loadApps() }
+                }
             }
         }
         meetingPrompt.enabled = model.settings.meetingPromptsEnabled
         meetingPrompt.canPrompt = { [weak self] in
             guard let self else { return false }
-            return acta.model.ready && !acta.model.busy && !acta.isWindowVisible && !dictadoRequested
+            return !acta.model.busy && !acta.isWindowVisible && !dictadoRequested
                 && !model.snapshot.phase.isActive && model.snapshot.phase != .recovery
-                && setup?.window?.isVisible != true && UserDefaults.standard.bool(forKey: "setupComplete")
+                && setup?.window?.isVisible != true
+        }
+        meetingPrompt.isReady = { [weak self] in
+            guard let self else { return false }
+            acta.refreshPermissions()
+            return acta.model.ready && acta.model.microphoneGranted && acta.model.appAudioGranted
         }
         meetingPrompt.actaInProgress = { [weak self] in self?.acta.model.hasSession == true }
         meetingPrompt.onStart = { [weak self] app in Task { await self?.acta.startSuggested(app) } }
@@ -80,7 +111,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         updater.start()
         startRefreshing()
         reloadHistory()
-        menu?.showHome()
         Task {
             // Existing users who closed setup after downloading models can
             // still use their cached models without repeating the walkthrough.
@@ -91,7 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         if !defaults.bool(forKey: "setupComplete"), !defaults.bool(forKey: "setupWelcomeSeen"), !defaults.bool(forKey: "setupPresented") {
             presentSetup()
-        }
+        } else { menu?.showHome() }
         tapasLog("launched Gráfico trusted=\(AXIsProcessTrusted())")
     }
 
@@ -160,6 +190,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             setHotkey: { [weak self] in self?.applyHotkey($0) },
             recordHotkey: { [weak self] in
                 guard let self, !model.snapshot.phase.isActive else { return }
+                finishShortcutRecording()
+                model.shortcutError = nil
                 model.recordingShortcut = true
                 hotkey.recording = true
             },
@@ -172,7 +204,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             retrySave: { [weak self] in Task { await self?.session?.retrySave(); self?.reloadHistory() } },
             cancel: { [weak self] in Task { await self?.cancel() } },
             quit: { NSApp.terminate(nil) },
-            acta: { [weak self] in self?.menu?.close(); self?.acta.show() },
+            close: { [weak self] in self?.finishShortcutRecording(); self?.menu?.close() },
+            cancelShortcutRecording: { [weak self] in self?.finishShortcutRecording() },
+            acta: { [weak self] in self?.acta.show() },
+            recordActaHotkey: { [weak self] in
+                guard let self, !model.snapshot.phase.isActive else { return }
+                finishShortcutRecording()
+                model.shortcutError = nil
+                model.recordingActaShortcut = true
+                hotkey.recording = true
+            },
+            resetActaHotkey: { [weak self] in self?.applyActaHotkey(.actaStandard) },
+            chooseFolder: { [weak self] in self?.chooseTranscriptFolder() },
+            resetFolder: { [weak self] in self?.setTranscriptFolder(TapasSettings().transcriptDirectory) },
             checkForUpdates: { [weak self] in self?.menu?.close(); self?.updater.check() },
             setUpdateChecks: { [weak self] in self?.updater.setAutomaticChecks($0) },
             setUpdateDownloads: { [weak self] in self?.updater.setAutomaticDownloads($0) }
@@ -180,6 +224,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     private func presentSetup() {
+        acta.dismissReceipt()
+        finishShortcutRecording()
         menu?.close()
         if setup?.window?.isVisible == true { setup?.show(); return }
         // Never switch an active take into practice or discard retained words.
@@ -188,11 +234,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             menu?.show()
             return
         }
+        if let setup, setup.model.flow.phase != .finished { setup.show(); return }
         var flow = SetupFlow.start(microphoneGranted: model.microphoneGranted, accessibilityTrusted: AXIsProcessTrusted(), modelsReady: session != nil)
         if let previous = setup?.model.flow, previous.phase != .finished { flow = previous }
         if !UserDefaults.standard.bool(forKey: "setupComplete"), !UserDefaults.standard.bool(forKey: "setupWelcomeSeen") { flow.phase = .peek }
         flow.hotkeyLabel = model.settings.hotkey.label
         let controller = SetupWindowController(flow: flow)
+        controller.setStage(UserDefaults.standard.bool(forKey: "setupComplete") ? 0 : UserDefaults.standard.integer(forKey: "onboardingStage"))
+        controller.model.transcriptDirectory = model.settings.transcriptDirectory
+        controller.model.folderConfirmed = UserDefaults.standard.bool(forKey: "transcriptFolderConfirmed")
+        controller.onStageChanged = { UserDefaults.standard.set($0, forKey: "onboardingStage") }
+        controller.allowAppAudio = { [weak self, weak controller] in
+            await self?.acta.allowAppAudio()
+            controller?.model.flow.modelError = self?.acta.model.error
+        }
+        controller.appAudioGranted = { CGPreflightScreenCaptureAccess() }
+        controller.chooseFolder = { [weak self] in self?.chooseTranscriptFolder() }
+        controller.defaultFolder = { [weak self] in self?.setTranscriptFolder(TapasSettings().transcriptDirectory) }
         controller.allowMicrophone = { [mic] in
             let granted = await mic.requestAuthorization()
             if !granted { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }
@@ -260,7 +318,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             session = created
             mic.onSamples = { samples in Task { await created.ingest(samples: samples, sampleRate: 16_000) } }
             model.ready = true
-            await acta.configure(pipeline: pipeline, root: model.settings.historyDirectory.deletingLastPathComponent())
+            await acta.configure(pipeline: pipeline, root: model.settings.transcriptDirectory)
+            await created.setHistoryDirectory(model.settings.historyDirectory)
+            await acta.setOutputDirectory(model.settings.actaDirectory)
         }
         prepareTask = task
         defer { prepareTask = nil; model.warming = false }
@@ -292,6 +352,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         paster.target = previousApplication
         paster.practiceMode = false
         await session.setHistoryEnabled(model.settings.historyEnabled)
+        await session.setHistoryDirectory(model.settings.historyDirectory)
         await session.toggle()
         model.snapshot = await session.snapshot()
     }
@@ -340,7 +401,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     }
 
     private func applyHotkey(_ value: Hotkey) {
+        finishShortcutRecording()
         guard !model.snapshot.phase.isActive else { return }
+        guard !value.conflicts(with: model.settings.actaHotkey) else {
+            model.shortcutError = "This overlaps with Acta’s shortcut. Choose different modifiers."
+            return
+        }
+        model.shortcutError = nil
         model.settings.hotkey = value
         hotkey.hotkey = value
         hotkey.noteTrustMayHaveChanged()
@@ -351,8 +418,68 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         savePreferences()
     }
 
+    private func finishShortcutRecording() {
+        hotkey.recording = false
+        model.recordingShortcut = false
+        model.recordingActaShortcut = false
+    }
+
+    private func applyActaHotkey(_ value: Hotkey) {
+        finishShortcutRecording()
+        guard !model.snapshot.phase.isActive else { return }
+        guard value.isActaShortcut, !value.conflicts(with: model.settings.hotkey) else {
+            model.shortcutError = "Use a key with at least two modifiers, different from Dictado’s shortcut."
+            return
+        }
+        model.shortcutError = nil
+        model.settings.actaHotkey = value
+        hotkey.actaHotkey = value
+        hotkey.noteTrustMayHaveChanged()
+        savePreferences()
+    }
+
+    private func chooseTranscriptFolder() {
+        let panel = NSOpenPanel()
+        panel.title = "Choose your transcript folder"
+        panel.message = "Tapas creates dictado and acta subfolders here for new recordings."
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.canCreateDirectories = true
+        panel.directoryURL = model.settings.transcriptDirectory
+        panel.begin { [weak self] response in
+            guard response == .OK, let root = panel.url else { return }
+            self?.setTranscriptFolder(root)
+        }
+    }
+
+    private func setTranscriptFolder(_ root: URL) {
+        do {
+            try TranscriptFolders.prepare(root: root)
+            model.settings.transcriptDirectory = root
+            acta.model.outputDirectory = model.settings.actaDirectory
+            model.folderError = nil
+            setup?.model.transcriptDirectory = root
+            setup?.model.folderConfirmed = true
+            setup?.model.folderError = nil
+            UserDefaults.standard.set(true, forKey: "transcriptFolderConfirmed")
+            model.selected = nil
+            savePreferences()
+            Task {
+                await session?.setHistoryDirectory(model.settings.historyDirectory)
+                await acta.setOutputDirectory(model.settings.actaDirectory)
+                reloadHistory()
+            }
+        } catch {
+            model.folderError = "Tapas couldn’t write to that folder. Choose a writable location. Your current folder is unchanged."
+            setup?.model.folderError = model.folderError
+        }
+    }
+
     private func savePreferences() {
         let defaults = UserDefaults.standard
+        defaults.set(model.settings.transcriptDirectory.path, forKey: "transcriptDirectory")
+        if let data = try? JSONEncoder().encode(model.settings.actaHotkey) { defaults.set(data, forKey: "actaHotkey") }
         defaults.set(model.settings.meetingPromptsEnabled, forKey: "meetingPromptsEnabled")
         meetingPrompt.enabled = model.settings.meetingPromptsEnabled
         defaults.set(model.settings.overlayEnabled, forKey: "overlayEnabled")
@@ -377,7 +504,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 guard !Task.isCancelled else { return }
                 self?.model.entries = entries
                 self?.model.libraryError = nil
-            } catch { self?.model.libraryError = "History couldn’t be read. Check access to Documents/tapas." }
+            } catch { self?.model.libraryError = "History couldn’t be read. Check your transcript folder in Preferences." }
         }
     }
 
@@ -386,7 +513,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             let root = model.settings.historyDirectory.deletingLastPathComponent()
             try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
             NSWorkspace.shared.open(root)
-        } catch { showNotice("The history folder couldn’t be opened. Check access to Documents.") }
+        } catch { showNotice("The transcript folder couldn’t be opened. Check its location in Preferences.") }
     }
 
     private func dismissResult() {

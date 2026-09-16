@@ -1,7 +1,8 @@
 # Acta native implementation
 
-Acta is available from Your plate → Tools. This is a development implementation;
-0.1.0 Preview 1 remains the historical Dictado-only package.
+Acta shares Tapas’s floating home with Dictado. Open it from Tools or with
+Control–Shift–M (configurable in Preferences). The shortcut opens controls; it
+does not begin recording.
 
 ## Meeting suggestions
 
@@ -12,31 +13,39 @@ attributes input to a running regular app by PID or bundle identity, including
 identifiable browser helpers, and ignores Tapas. Unknown services are ignored
 rather than attributed to whichever app happens to be in front.
 
-After three seconds of activity, a non-activating panel offers Start Acta / Not
-now. It dismisses after 30 seconds or when the app stops using input. An offer is
+After three seconds of activity, a non-activating Pintxo invitation offers Record
+meeting (or Set up & record) / Not now. It stays until a response or the app stops
+using input; there is no timer. An offer is
 remembered for the current microphone-use episode; a minute without activity
 rearms it. A global minute cooldown avoids a burst of unrelated prompts. Short
 mute/reconnect gaps do not repeat the prompt. Detection is a heuristic, so the
 copy states microphone use rather than asserting that a meeting was detected.
 
-Suggestions wait until setup/models are ready, defer during Dictado, and are
-suppressed while Acta is active or its window is open. Start Acta rechecks the
-suggested app against capturable sources and completes required permissions;
-it never selects a different app as fallback. No recording begins from detection
+Suggestions work before setup/models are ready, defer during Dictado or setup,
+and are suppressed while Acta is active or its controls are open. Accepting an
+invitation rechecks the detected app against capturable sources. When models and
+permissions are already ready, capture starts without taking focus from the call.
+Otherwise Acta opens its setup controls with the detected app remembered. Allowing
+a permission never starts recording; Start Acta remains an explicit action.
+No different app is selected as fallback. No recording begins from detection
 alone. Preferences can disable suggestions and stop polling. Read errors surface
 in Preferences and do not count as a meeting ending. There are no calendar,
 meeting-service or MCP dependencies.
 
 ## Recording and ownership
 
-- Explicit microphone permission and app selection. App enumeration requests
-  Screen & System Audio Recording access via ScreenCaptureKit. Browser selection
+- Explicit microphone permission and app selection. A dedicated Allow meeting
+  audio action requests Screen & System Audio Recording access. App enumeration
+  is gated by a permission preflight, and background detection never requests it. Browser selection
   can include other tabs. No screen output is registered or persisted.
 - A ScreenCaptureKit stream captures the selected app and microphone separately.
   Native PCM formats are converted to 16 kHz mono per source. Five-second chunks
   keep audio memory bounded; recognition uses the existing local Voz/Ear pipeline.
-- The window shows elapsed recorded time, input meters, transcript preview and
-  Pause/Resume/Finish. Closing or minimizing it leaves a floating companion.
+- The shared home shows elapsed recorded time, input meters, transcript preview
+  and Pause/Resume/Finish. All tools returns home without stopping capture. Leaving
+  Acta reveals a compact Pintxo; click it for controls. Its four ingredients unfold
+  into bars driven by measured input levels, and gather on pause/save. Reduced
+  Motion retains a static Pintxo. Background saves show a dismissible receipt.
 - Pause stops the capture stream, flushes each source’s partial chunk and waits
   for queued journal writes. Resume creates a new stream with an accumulated
   recorded-time offset. Recognition already queued may finish while paused.
@@ -54,8 +63,11 @@ and the SDK’s audio/microphone stream outputs on macOS 15+.
 
 ## Files and recovery
 
-The full, unredacted transcript is written to `~/Documents/tapas/acta/`, regardless
-of Dictado’s history preference. Markdown includes date, recorded duration,
+The full, unredacted transcript is written to the shared folder’s `acta/`
+subdirectory, regardless of Dictado’s history preference. The default is
+`~/Documents/tapas/`. Onboarding and Preferences use the same native folder picker.
+New recordings use a changed location; active takes and recovery retain their
+original destination, and existing files are not moved. Markdown includes date, recorded duration,
 languages, timestamped microphone/app-source segments and interruption notes.
 Labels are sources, not speaker identities. Use headphones to reduce duplicate
 voices caused by microphone pickup of app playback. No summarization or diarization.
@@ -96,7 +108,8 @@ companion views. Rendering uses sample data and never records audio.
 ## Required live-device checks
 
 - Start a call in a browser, Zoom or Teams: verify app attribution, a single
-  suggestion, dismissal/timeout, mute/reconnect suppression and preference opt-out.
+  suggestion lasting beyond 30 seconds, dismissal, mute/reconnect suppression and
+  preference opt-out.
   Unknown system helpers may require manually starting Acta.
 - Allow/deny/revoke microphone and Screen & System Audio Recording access in the
   packaged app; verify actionable recovery and no recording before Start.

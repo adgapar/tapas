@@ -41,7 +41,7 @@ public struct MeetingPromptPolicy: Sendable {
             return !episode.offered && now - episode.since >= debounce
         }) else { return nil }
         // Co-occurring microphone users belong to the same offered conversation.
-        // Dismissal, timeout and acceptance all suppress repeated offers.
+        // Dismissal and acceptance all suppress repeated offers.
         for id in active { episodes[id]?.offered = true }
         lastPrompt = now
         return app

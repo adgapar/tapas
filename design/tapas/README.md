@@ -14,6 +14,16 @@ The selected design direction: modern, playful local AI tools, represented by fo
 
 The direction is now applied to the native Dictado app. See [native implementation and verification](IMPLEMENTATION.md) for what is connected to real capture and what still needs device testing. Acta also has a native implementation; see [capture, recovery and remaining verification](../../docs/ACTA.md).
 
+## Current interaction review
+
+Start with [One home, small tools](interactions.html), the current clickable
+interaction study. It covers shared tool navigation, automatic meeting
+suggestions, contextual permissions, capture, recovery, Recent, shortcuts and
+transcript folders. [Interaction decisions and review paths](INTERACTIONS.md)
+record the intended behavior and remaining native verification. The older study
+below remains a visual reference. The reviewed flows are now implemented natively;
+see the verification section for the remaining live-device checks.
+
 ## Preview
 
 From the repository root:
@@ -24,7 +34,7 @@ python3 -m http.server 8765 --directory design/tapas
 
 Open [the prototype](http://localhost:8765/). No build step, dependencies or external assets are needed.
 
-Explore [Dictado form and motion](dictado-motion.html): **El borde is the selected Dictado direction**, a 124 × 28 px top-edge signal. Its four pintxo ingredients rotate and spread into voice bars during capture, then gather back into the mark. The enlarged motion view shows the same four elements transforming. The floating El pintxo remains an **Acta companion exploration**, not an implemented meeting interface. Idle is hidden; starting a take reveals the signal immediately. A camera-notch toggle previews its position below the camera and menu bar. Live words are optional and separate from recording status. El borde is also implemented natively in SwiftUI/AppKit, with actual microphone levels, display-safe positioning, separate live captions and a brief delivery receipt. The camera toggle and Acta companion remain HTML explorations.
+Explore [Dictado form and motion](dictado-motion.html): **El borde is the selected Dictado direction**, a 124 × 28 px top-edge signal. Its four pintxo ingredients rotate and spread into voice bars during capture, then gather back into the mark. The enlarged motion view shows the same four elements transforming. The floating Pintxo is implemented as Acta’s audio-reactive companion. Idle is hidden; starting a take reveals the signal immediately. A camera-notch toggle previews its position below the camera and menu bar. Live words are optional and separate from recording status. El borde is also implemented natively in SwiftUI/AppKit, with actual microphone levels, display-safe positioning, separate live captions and a brief delivery receipt. The camera toggle remains an HTML exploration.
 
 Use the journey rail to explore onboarding, Dictado, Acta and Your plate. The scenario picker introduces permission, connection, paste and save failures. Start an Acta session and switch to another journey to explore its persistent status. Reset demo or reload to start over.
 

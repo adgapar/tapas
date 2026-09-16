@@ -27,3 +27,33 @@ import Testing
     #expect(!completed)
     #expect(dismissed)
 }
+
+@MainActor @Test func openStageRequiresChosenFolderAndNeverStartsPracticeByAdvancing() async {
+    _ = NSApplication.shared
+    let controller = SetupWindowController(flow: SetupFlow(phase: .kitchen))
+    var recordings = 0
+    var completions = 0
+    controller.onPracticeToggle = { recordings += 1 }
+    controller.onFinished = { completions += 1 }
+    await controller.primary()
+    #expect(controller.model.stage == 2)
+    controller.model.folderConfirmed = true
+    await controller.primary()
+    #expect(controller.model.stage == 3)
+    #expect(recordings == 0)
+    await controller.handleTalk()
+    #expect(recordings == 0) // Models and microphone are still unavailable.
+    await controller.primary()
+    #expect(completions == 1)
+}
+
+@MainActor @Test func onboardingBackCannotLeaveActivePractice() {
+    _ = NSApplication.shared
+    let controller = SetupWindowController(flow: SetupFlow(phase: .tryIt))
+    controller.model.phase = .listening
+    controller.back()
+    #expect(controller.model.stage == 3)
+    controller.model.phase = .idle
+    controller.back()
+    #expect(controller.model.stage == 2)
+}

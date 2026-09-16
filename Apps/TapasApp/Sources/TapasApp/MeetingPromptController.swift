@@ -8,6 +8,7 @@ final class MeetingPromptController {
         didSet { if !enabled { dismiss(); onAvailability(nil) } }
     }
     var canPrompt: () -> Bool = { false }
+    var isReady: () -> Bool = { false }
     var actaInProgress: () -> Bool = { false }
     var onStart: (MicrophoneApp) -> Void = { _ in }
     var onAvailability: (String?) -> Void = { _ in }
@@ -15,7 +16,6 @@ final class MeetingPromptController {
     private var task: Task<Void, Never>?
     private var panel: NSPanel?
     private var suggested: MicrophoneApp?
-    private var expiresAt: TimeInterval = 0
 
     func start() {
         guard task == nil else { return }
@@ -60,7 +60,7 @@ final class MeetingPromptController {
         let now = ProcessInfo.processInfo.systemUptime
         let allowed = canPrompt()
         let inProgress = actaInProgress()
-        if let suggested, active[suggested.bundleID]?.pid != suggested.pid || !allowed || inProgress || now >= expiresAt { dismiss() }
+        if let suggested, active[suggested.bundleID]?.pid != suggested.pid || !allowed || inProgress { dismiss() }
         let foreground = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
         let ordered = active.keys.sorted { lhs, rhs in
             if lhs == rhs { return false }
@@ -75,22 +75,21 @@ final class MeetingPromptController {
 
     private func show(_ app: MicrophoneApp) {
         suggested = app
-        expiresAt = ProcessInfo.processInfo.systemUptime + 30
-        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 360, height: 190), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
+        let panel = NSPanel(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hidesOnDeactivate = false
         panel.backgroundColor = .clear
         panel.isOpaque = false
-        panel.hasShadow = true
-        panel.contentView = NSHostingView(rootView: MeetingPromptView(appName: app.name, start: { [weak self] in
+        panel.hasShadow = false
+        panel.contentView = NSHostingView(rootView: MeetingPromptView(appName: app.name, ready: isReady(), start: { [weak self] in
             guard let self, let selected = suggested, enabled, canPrompt(), !actaInProgress() else { self?.dismiss(); return }
             dismiss()
             onStart(selected)
         }, dismiss: { [weak self] in self?.dismiss() }))
         if let screen = NSScreen.screens.first(where: { $0.frame.contains(NSEvent.mouseLocation) }) ?? NSScreen.main {
-            panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - 380, y: screen.visibleFrame.maxY - 210))
+            panel.setFrameOrigin(NSPoint(x: screen.visibleFrame.maxX - 420, y: screen.visibleFrame.minY + 24))
         }
         self.panel = panel
         // A suggestion must not take focus away from the meeting app.
@@ -100,24 +99,23 @@ final class MeetingPromptController {
 
 struct MeetingPromptView: View {
     let appName: String
+    var ready = true
     let start: () -> Void
     let dismiss: () -> Void
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                ToolGlyph(symbol: "text.bubble", color: Grafico.cobalt)
-                Text("Keep this conversation?").font(.system(size: 17, weight: .semibold))
-                Spacer(minLength: 0)
-            }
-            Text("\(appName) is using your microphone. Acta can keep a local transcript.")
-                .font(.system(size: 12)).lineLimit(3).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                Button("Start Acta", action: start).buttonStyle(GraficoButtonStyle())
-                Button("Not now", action: dismiss).buttonStyle(.plain)
-                Spacer()
-            }.font(.system(size: 12))
-            Text("Start when everyone is ready to be recorded.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
-        }.padding(18).frame(width: 360, height: 190).background(Grafico.paper, in: RoundedRectangle(cornerRadius: 16))
-            .foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+        VStack(alignment: .trailing, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                TapasWordmark(size: 23)
+                Text("A conversation worth keeping?").font(.system(size: 20, weight: .bold))
+                Text("\(appName) is using your microphone. Acta can keep a transcript on your Mac.")
+                    .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 16) {
+                    Button(ready ? "Record meeting" : "Set up & record", action: start).buttonStyle(GraficoButtonStyle())
+                    Button("Not now", action: dismiss).buttonStyle(.plain)
+                }.font(.system(size: 12))
+                Text("Start when everyone is ready to be recorded.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
+            }.plateSurface()
+            PintxoWaveform().scaleEffect(0.65).frame(width: 90, height: 70).padding(.trailing, 20)
+        }.padding(10).frame(width: 400, height: 300).foregroundStyle(Grafico.ink).preferredColorScheme(.light)
     }
 }

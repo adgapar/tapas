@@ -7,7 +7,7 @@
 <p align="center">Local dictation and meeting transcripts for Mac.</p>
 <p align="center">
   <a href="https://github.com/adgapar/tapas/releases/latest"><strong>Download for Mac</strong></a>
-  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.1">What’s new</a>
+  · <a href="https://github.com/adgapar/tapas/releases/tag/v0.1.2">What’s new</a>
 </p>
 <p align="center">Apple silicon · macOS 15 or later</p>
 
@@ -42,7 +42,8 @@ Change the shortcut to suit you. Keep a local history when you want one.
 
 Capture your microphone and the audio from your meeting app. Tapas can offer
 to start Acta when another app uses the microphone—you decide when to record.
-A floating companion keeps pause, resume and finish within reach.
+Open Acta with **Control–Shift–M**, or from the shared home. A floating Pintxo
+unfolds into a live waveform while recording; click it for pause, resume and finish.
 
 Finish the meeting and keep a timestamped transcript in Markdown. No meeting
 bot or calendar connection needed.
@@ -50,8 +51,9 @@ bot or calendar connection needed.
 ## Your words stay useful
 
 Transcription runs on your Mac. Saved transcripts are ordinary Markdown files
-in **`~/Documents/tapas/`**: open them in your editor, search them, or use them
-with your favorite AI tools and scripts. You choose what gets access.
+in a folder you choose (default **`~/Documents/tapas/`**). Both tools share this
+location, with their own subfolders. Open files in your editor, search them, or
+use them with your favorite AI tools and scripts. You choose what gets access.
 
 No Tapas account is required. Your files remain yours to read and use outside
 the app.
@@ -59,7 +61,8 @@ the app.
 ## Make yourself at home
 
 1. **Download** the DMG and drag Tapas into Applications.
-2. **Open Tapas** and follow the short setup to prepare voice models and permissions.
+2. **Open Tapas** for a four-step welcome: meet the tools, allow access, choose a
+   transcript folder, and try a private practice take. You can finish later.
 3. **Open Tapas from the Dock or Applications** for Dictado, Acta, Recent and Preferences.
    The pintxo in your menu bar is a shortcut to the same tools.
 

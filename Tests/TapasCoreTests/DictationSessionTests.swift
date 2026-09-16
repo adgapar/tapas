@@ -109,3 +109,20 @@ func quiet() -> [Float] { [Float](repeating: 0, count: 320) }
     for _ in 0..<10 { await session.ingest(samples: loud(), sampleRate: 16_000) }
     #expect(await session.snapshot().committedText == "hello")
 }
+
+@Test func changingFolderKeepsCurrentTakeAndUsesNewFolderForNextTake() async throws {
+    let root = try tempDir(); defer { try? FileManager.default.removeItem(at: root) }
+    let first = root.appendingPathComponent("first")
+    let second = root.appendingPathComponent("second")
+    let session = makeSession(paster: SpyPaster(), directory: first)
+    await session.toggle()
+    await session.setHistoryDirectory(second)
+    for _ in 0..<20 { await session.ingest(samples: loud(), sampleRate: 16_000) }
+    await session.toggle()
+    #expect(try HistoryLibrary.read(directory: first).count == 1)
+    #expect(!FileManager.default.fileExists(atPath: second.path))
+    await session.toggle()
+    for _ in 0..<20 { await session.ingest(samples: loud(), sampleRate: 16_000) }
+    await session.toggle()
+    #expect(try HistoryLibrary.read(directory: second).count == 1)
+}

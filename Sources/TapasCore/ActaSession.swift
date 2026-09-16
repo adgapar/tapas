@@ -16,6 +16,7 @@ public struct ActaSegment: Codable, Equatable, Sendable {
 public struct ActaDocument: Codable, Sendable {
     public var id = UUID()
     public var startedAt = Date()
+    public var outputDirectory: URL?
     public var appName: String
     public var duration: TimeInterval = 0
     public var segments: [ActaSegment] = []
@@ -76,7 +77,7 @@ public actor ActaSession {
     }
     private let pipeline: TranscriptionPipeline
     private let recoveryRoot: URL
-    private let outputDirectory: URL
+    private var outputDirectory: URL
     private var state = ActaSnapshot()
     private var pending: [URL] = []
     private var worker: Task<Void, Never>?
@@ -89,6 +90,8 @@ public actor ActaSession {
         self.recoveryRoot = recoveryRoot
         self.outputDirectory = outputDirectory
     }
+
+    public func setOutputDirectory(_ directory: URL) { outputDirectory = directory }
 
     public func snapshot() -> ActaSnapshot {
         var result = state
@@ -105,7 +108,9 @@ public actor ActaSession {
         for folder in folders {
             let journal = folder.appendingPathComponent("session.json")
             guard FileManager.default.fileExists(atPath: journal.path) else { continue }
-            let document = try JSONDecoder().decode(ActaDocument.self, from: Data(contentsOf: journal))
+            var document = try JSONDecoder().decode(ActaDocument.self, from: Data(contentsOf: journal))
+            // Checkpoints from before selectable folders always used Documents/tapas/acta.
+            if document.outputDirectory == nil { document.outputDirectory = TapasSettings().actaDirectory }
             guard folder.lastPathComponent == document.id.uuidString else { throw CocoaError(.fileReadCorruptFile) }
             let chunks = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
                 .filter { $0.lastPathComponent.hasPrefix("audio-") }.sorted { $0.lastPathComponent < $1.lastPathComponent }
@@ -129,6 +134,7 @@ public actor ActaSession {
         guard state.phase == .idle || state.phase == .saved else { return }
         state = ActaSnapshot()
         state.document = ActaDocument(appName: appName)
+        state.document?.outputDirectory = outputDirectory
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
             try checkpoint()
@@ -216,6 +222,7 @@ public actor ActaSession {
             if let worker { await worker.value }
             guard !processingFailed, pending.isEmpty else { state.phase = .recovery; return }
             guard let document = state.document else { return }
+            let outputDirectory = document.outputDirectory ?? self.outputDirectory
             try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
             let url = outputDirectory.appendingPathComponent("\(HistoryWriter.filename(for: document.startedAt).dropLast(3))-\(document.id.uuidString).md")
             try Data(document.markdown.utf8).write(to: url, options: .atomic)

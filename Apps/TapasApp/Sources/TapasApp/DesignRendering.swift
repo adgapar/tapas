@@ -37,7 +37,8 @@ enum DesignRendering {
         window.contentView = host
         window.appearance = NSAppearance(named: .aqua)
         host.layoutSubtreeIfNeeded()
-        RunLoop.current.run(until: Date().addingTimeInterval(0.15))
+        window.orderFront(nil)
+        RunLoop.current.run(until: Date().addingTimeInterval(1.1))
         host.layoutSubtreeIfNeeded()
         guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { throw CocoaError(.fileWriteUnknown) }
         host.cacheDisplay(in: host.bounds, to: bitmap)
@@ -52,19 +53,20 @@ enum DesignRendering {
             let model = SetupModel(flow: SetupFlow(phase: phase, microphoneGranted: i > 1, modelsReady: i > 3, downloadFraction: 0.64))
             model.practiceText = i == 4 ? "A little more room for the good ideas." : ""
             model.completedPractice = i == 4
-            try saveHosted(SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }), size: NSSize(width: 680, height: 560), to: directory.appendingPathComponent("setup-\(i).png"))
+            try saveHosted(SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }), size: NSSize(width: 920, height: 730), to: directory.appendingPathComponent("setup-\(i).png"))
         }
         let actions = PlateActions(talk: {}, setup: {}, setHotkey: { _ in }, recordHotkey: {}, preferencesChanged: {}, folder: {}, copy: { _ in }, export: { _ in }, dismiss: {}, retryPaste: {}, retrySave: {}, cancel: {}, quit: {})
         let model = PlateModel()
         model.ready = true; model.microphoneGranted = true; model.accessibilityTrusted = true; model.shortcutRunning = true
         for tab in ["Tools", "Recent", "Preferences"] {
             model.tab = tab
-            try saveHosted(PlateView(model: model, actions: actions), size: NSSize(width: 410, height: 620), to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
+            try saveHosted(PlateView(model: model, actions: actions), size: NSSize(width: 710, height: 770), to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
-        try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 360, height: 190), to: directory.appendingPathComponent("acta-suggestion.png"))
+        try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 400, height: 300), to: directory.appendingPathComponent("acta-suggestion.png"))
         let acta = ActaController()
         acta.model.ready = true
         acta.model.microphoneGranted = true
+        acta.model.appAudioGranted = true
         acta.model.apps = [ActaAppSource(id: 42, name: "Meeting app")]
         acta.model.selectedApp = 42
         try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-ready.png"))
@@ -84,8 +86,14 @@ enum DesignRendering {
             acta.model.snapshot.message = phase == .recovery ? "The file couldn’t be saved. Your meeting is retained. Retry or export your words." : nil
             try saveHosted(ActaView(model: acta.model, controller: acta), size: NSSize(width: 540, height: 650), to: directory.appendingPathComponent("acta-\(phase.rawValue).png"))
         }
+        model.tab = "Tools"
+        model.selectedTool = "Acta"
+        try saveHosted(PlateView(model: model, actions: actions, actaController: acta), size: PlateWindowController.size, to: directory.appendingPathComponent("home-acta-saved.png"))
+        model.selectedTool = nil
+        let compact = NSSize(width: 590, height: 640)
+        try saveHosted(FittedSurface(width: 710, height: 770) { PlateView(model: model, actions: actions, actaController: acta) }, size: compact, to: directory.appendingPathComponent("home-small-display.png"))
         acta.model.snapshot.phase = .recording
-        try saveHosted(ActaCompanion(model: acta.model, controller: acta), size: NSSize(width: 330, height: 116), to: directory.appendingPathComponent("acta-companion.png"))
+        try saveHosted(ActaCompanion(model: acta.model, controller: acta), size: NSSize(width: 340, height: 320), to: directory.appendingPathComponent("acta-companion.png"))
         let overlay = OverlayModel()
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.08, phase: .listening)
         for phase in [DictationPhase.starting, .listening, .finishing, .delivered] {
