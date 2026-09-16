@@ -84,8 +84,11 @@ updates; you can also choose **Check for Updates…** in the app.
 
 ## A few useful details
 
-- Dictation supports 25 European languages, including English, Spanish, French,
-  German, Portuguese and Ukrainian.
+- Dictation supports 25 languages: Bulgarian, Croatian, Czech, Danish, Dutch,
+  English, Estonian, Finnish, French, German, Greek, Hungarian, Italian, Latvian,
+  Lithuanian, Maltese, Polish, Portuguese, Romanian, Russian, Slovak, Slovenian,
+  Spanish, Swedish and Ukrainian. It uses Desert Ant Labs’ Voz, based on
+  [NVIDIA Parakeet TDT 0.6B v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3).
 - Acta saves transcripts with microphone and app-audio labels. Summaries, action
   items and individual speaker identification are not included yet.
 - For browser meetings, selecting the browser can capture audio from its other
