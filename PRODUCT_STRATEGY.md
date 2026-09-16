@@ -30,6 +30,10 @@ Future summaries, meeting insights, skills and MCP integrations are conveniences
 built on those files. Derived results should preserve the source transcript;
 they should not replace it or trap it inside the app.
 
+[Agent-ready files follow-up](docs/AGENT_READY_FILES_PLAN.md) preserves the
+proposal for discovery indexes, shared metadata, assistant skill installation,
+optional local enrichment, and the separate speaker-attribution work.
+
 [Product messaging](design/tapas/MESSAGING.md) records the approved wording and
 how to demonstrate this principle without promising unimplemented behavior.
 
