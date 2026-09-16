@@ -35,8 +35,11 @@ struct FittedSurface<Content: View>: View {
     var body: some View {
         GeometryReader { proxy in
             let scale = min(proxy.size.width / width, proxy.size.height / height)
+            // Hosting views can propose zero size during initial layout. A zero
+            // scale makes AppKit-backed scroll view transforms non-invertible.
+            let safeScale = scale.isFinite && scale > 0 ? scale : 1
             content().frame(width: width, height: height)
-                .scaleEffect(scale, anchor: .topLeading)
+                .scaleEffect(safeScale, anchor: .topLeading)
         }
     }
 }
