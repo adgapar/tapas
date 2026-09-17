@@ -285,6 +285,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         controller.downloadModels = { [weak self] in try await self?.prepareModels() }
         controller.downloadFraction = { [catalog] in await catalog.downloadFraction }
+        controller.preparationStatus = { [catalog] in await catalog.preparationStatus }
+        controller.isPreparing = { [weak self] in self?.model.warming ?? false }
         controller.modelsReady = { [weak self] in self?.session != nil }
         controller.onHotkey = { [weak self] in self?.applyHotkey($0) }
         controller.onPracticeToggle = { [weak self] in

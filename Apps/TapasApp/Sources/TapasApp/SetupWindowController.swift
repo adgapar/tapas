@@ -20,6 +20,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     var pollAccessibility: (() -> (trusted: Bool, tapStarted: Bool))?
     var downloadModels: (() async throws -> Void)?
     var downloadFraction: (() async -> Double)?
+    var preparationStatus: (() async -> ModelPreparationStatus)?
+    var isPreparing: (() -> Bool)?
     var modelsReady: (() -> Bool)?
     var onPracticeToggle: (() async -> Void)?
     var onCancel: (() -> Void)?
@@ -101,7 +103,9 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         }
         model.appAudioGranted = appAudioGranted?() ?? false
         model.flow.modelsReady = modelsReady?() ?? false
+        if let isPreparing { model.downloading = isPreparing() }
         if model.downloading, let downloadFraction { model.flow.downloadFraction = await downloadFraction() }
+        if model.downloading, let preparationStatus { model.preparationStatus = await preparationStatus() }
         if model.flow.phase == .tryIt, let snap = await practiceSnapshot?() {
             model.phase = snap.phase
             model.level = min(1, Double(snap.rms) * 8)
@@ -162,7 +166,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             model.flow.modelsReady = true
             model.flow.downloadFraction = 1
         } catch {
-            model.flow.modelError = "The models couldn’t be prepared. Check your connection and free disk space, then try again. Downloaded model files are kept."
+            model.flow.modelError = "The models couldn’t be prepared. \(error.localizedDescription) Downloaded model files are kept. Try preparing again."
         }
     }
 

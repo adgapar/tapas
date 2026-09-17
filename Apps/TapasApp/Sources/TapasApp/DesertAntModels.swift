@@ -54,6 +54,8 @@ actor DesertCatalog: ModelCatalog {
     nonisolated let redactor = Redact()
     private var fraction: Double = 0
     private var prepared = false
+    private var preparationStep = 0
+    private(set) var preparationStatus = ModelPreparationStatus()
 
     // Disk validation is deliberately restricted to preparation, never the hotkey path.
     var isDownloaded: Bool {
@@ -64,16 +66,45 @@ actor DesertCatalog: ModelCatalog {
 
     func download() async throws {
         if prepared { return }
+        fraction = 0
         // These calls load the cached models too; the same instances are reused for each take.
-        try await ear.download { value in Task { await self.setFraction(value * 0.1) } }
-        try await uhm.download { value in Task { await self.setFraction(0.1 + value * 0.1) } }
-        try await Voz.download { progress in Task { await self.setFraction(0.2 + progress.fraction * 0.7) } }
-        try await redactor.download { value in Task { await self.setFraction(0.9 + value * 0.08) } }
+        let earStep = beginPreparation("language detection")
+        try await ear.download { value in Task { await self.report(value, step: earStep, base: 0, weight: 0.1) } }
+        let uhmStep = beginPreparation("filler detection")
+        try await uhm.download { value in Task { await self.report(value, step: uhmStep, base: 0.1, weight: 0.1) } }
+        let vozStep = beginPreparation("speech recognition")
+        try await Voz.download { progress in Task { await self.report(progress.fraction, step: vozStep, base: 0.2, weight: 0.7) } }
+        let redactStep = beginPreparation("text privacy")
+        try await redactor.download { value in Task { await self.report(value, step: redactStep, base: 0.9, weight: 0.08) } }
+        beginPreparation("speech recognition")
+        preparationStatus.phase = .preparing
         fraction = 0.98
         prepared = true
     }
 
-    private func setFraction(_ value: Double) { fraction = min(0.98, max(fraction, value)) }
+    @discardableResult
+    private func beginPreparation(_ model: String) -> Int {
+        preparationStep += 1
+        preparationStatus = ModelPreparationStatus(model: model)
+        stepFraction = 0
+        return preparationStep
+    }
+
+    private var stepFraction: Double = 0
+
+    private func report(_ value: Double, step: Int, base: Double, weight: Double) {
+        // Callback Tasks can arrive after the next model starts, or out of order.
+        guard step == preparationStep, value >= stepFraction else { return }
+        stepFraction = value
+        fraction = min(0.98, max(fraction, base + value * weight))
+        // The SDK reports 1 while it builds the local runtime, after downloading.
+        let downloading = value < 1
+        if downloading != (preparationStatus.fraction != nil) {
+            preparationStatus.startedAt = Date()
+        }
+        preparationStatus.fraction = downloading ? value : nil
+        preparationStatus.phase = downloading ? .downloading : .preparing
+    }
 }
 
 func makeVoz() async throws -> Voz {

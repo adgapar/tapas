@@ -9,6 +9,7 @@ final class SetupModel {
     var entered = false
     var isPresented = false
     var downloading = false
+    var preparationStatus = ModelPreparationStatus()
     var busy = false
     var practiceText = ""
     var phase: DictationPhase = .idle
@@ -292,10 +293,28 @@ struct SetupView: View {
                 }
             }
             if !model.flow.modelsReady {
-                Text("Prepare your local voice models once. Practice stays in this window.").font(.system(size: 13)).foregroundStyle(Grafico.muted)
+                if !model.downloading {
+                    Text("tapas downloads voice models and prepares each one for this Mac. First-time setup can take several minutes. Prepared models are saved for future use.").font(.system(size: 13)).foregroundStyle(Grafico.muted)
+                }
                 if model.downloading {
-                    ProgressView(value: model.flow.downloadFraction).tint(Grafico.olive)
-                    Text(model.flow.downloadFraction, format: .percent.precision(.fractionLength(0))).font(.system(size: 11, design: .monospaced))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(model.preparationStatus.title).font(.system(size: 13, weight: .medium))
+                        if let fraction = model.preparationStatus.fraction {
+                            ProgressView(value: fraction).tint(Grafico.olive)
+                            Text(fraction, format: .percent.precision(.fractionLength(0)))
+                                .font(.system(size: 11, design: .monospaced))
+                        } else {
+                            HStack(spacing: 10) {
+                                ProgressView().controlSize(.small)
+                                TimelineView(.periodic(from: .now, by: 1)) { context in
+                                    let seconds = max(0, Int(context.date.timeIntervalSince(model.preparationStatus.startedAt)))
+                                    Text("\(seconds / 60)m \(seconds % 60)s elapsed")
+                                        .font(.system(size: 11, design: .monospaced))
+                                }
+                            }
+                        }
+                        Text(model.preparationStatus.detail).font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                    }
                 }
                 Button(model.downloading ? "Preparing…" : "Prepare voice models") { Task { await onPrepare() } }.buttonStyle(GraficoButtonStyle()).disabled(model.downloading)
             } else if !model.flow.microphoneGranted {

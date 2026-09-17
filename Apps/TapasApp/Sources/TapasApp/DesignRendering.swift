@@ -76,8 +76,16 @@ enum DesignRendering {
 
     static func renderViews(to directory: URL) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for state in ["ready", "installed", "conflict", "unprepared", "receipt-installed"] {
-            let setup = SetupModel(flow: SetupFlow(phase: .tryIt, microphoneGranted: state != "unprepared", modelsReady: state != "unprepared"))
+        for state in ["ready", "installed", "conflict", "unprepared", "downloading", "preparing", "receipt-installed"] {
+            let needsModels = ["unprepared", "downloading", "preparing"].contains(state)
+            let setup = SetupModel(flow: SetupFlow(phase: .tryIt, microphoneGranted: state != "unprepared", modelsReady: !needsModels))
+            if state == "downloading" || state == "preparing" {
+                setup.downloading = true
+                setup.preparationStatus = ModelPreparationStatus(
+                    model: "filler detection", phase: state == "downloading" ? .downloading : .preparing,
+                    fraction: state == "downloading" ? 0.42 : nil,
+                    startedAt: Date().addingTimeInterval(-180))
+            }
             if state == "installed" || state == "receipt-installed" {
                 setup.assistant.status = "Installed"
                 setup.assistant.message = "Skill installed. Start a new assistant session to load it."
