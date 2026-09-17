@@ -4,9 +4,9 @@ public enum OverlayCopy {
     public static func message(for error: DictationError) -> String? {
         switch error {
         case .microphoneDenied:
-            return "Microphone is off. Open System Settings to allow Tapas."
+            return "Microphone is off. Open System Settings to allow tapas."
         case .accessibilityDenied:
-            return "Allow Tapas in Accessibility to paste into your app. Your words are kept."
+            return "Allow tapas in Accessibility to paste into your app. Your words are kept."
         case .modelNotReady:
             return "Prepare the voice models in Setup to start Dictado."
         case .emptyClip:
@@ -19,7 +19,7 @@ public enum SetupGate {
     public static func message(trusted: Bool, tapStarted: Bool) -> String? {
         if tapStarted { return nil }
         if trusted {
-            return "That's on. Quit Tapas from the menu bar and open it once more — macOS is picky."
+            return "That's on. Quit tapas from the menu bar and open it once more — macOS is picky."
         }
         return OverlayCopy.message(for: .accessibilityDenied)
     }

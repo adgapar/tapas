@@ -3,9 +3,9 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>Tapas</string>
+	<string>tapas</string>
 	<key>CFBundleDisplayName</key>
-	<string>Tapas</string>
+	<string>tapas</string>
 	<key>CFBundleIdentifier</key>
 	<string>work.tapas.Tapas</string>
 	<key>CFBundleVersion</key>
@@ -27,7 +27,7 @@
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Acta captures your microphone and computer audio to transcribe conversations on this Mac. Screen images are not saved.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Tapas uses the microphone for dictation and meeting transcripts. Audio stays on this Mac.</string>
+	<string>tapas uses the microphone for dictation and meeting transcripts. Audio stays on this Mac.</string>
 	<key>SUFeedURL</key>
 	<string>https://github.com/adgapar/tapas/releases/download/updates/appcast.xml</string>
 	<key>SUPublicEDKey</key>

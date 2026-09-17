@@ -17,7 +17,7 @@ final class MenuBarController: NSObject {
         item.button?.image?.isTemplate = false
         item.button?.target = self
         item.button?.action = #selector(toggle)
-        item.button?.setAccessibilityLabel("Tapas — Small tools. Good company.")
+        item.button?.setAccessibilityLabel("tapas — Small tools. Good company.")
     }
     var isShown: Bool { home.window?.isKeyWindow == true }
     func showHome() { onOpen?(); home.show() }
@@ -27,6 +27,6 @@ final class MenuBarController: NSObject {
     func update(_ snapshot: OverlaySnapshot, actaStatus: String? = nil) {
         let status = snapshot.phase == .idle ? (actaStatus ?? Grafico.tagline) : "Dictado · \(snapshot.phase.rawValue)"
         item.button?.toolTip = status
-        item.button?.setAccessibilityLabel("Tapas — \(status)")
+        item.button?.setAccessibilityLabel("tapas — \(status)")
     }
 }

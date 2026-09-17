@@ -4,7 +4,7 @@ import Testing
 @Test func micDeniedCopy() {
     #expect(
         OverlayCopy.message(for: .microphoneDenied)
-            == "Microphone is off. Open System Settings to allow Tapas."
+            == "Microphone is off. Open System Settings to allow tapas."
     )
 }
 
@@ -18,7 +18,7 @@ import Testing
 
 @Test func setupGateAsksForRelaunchWhenTrustedButTapFailed() {
     let text = SetupGate.message(trusted: true, tapStarted: false)
-    #expect(text?.contains("Quit Tapas") == true)
+    #expect(text?.contains("Quit tapas") == true)
 }
 
 @Test func setupGateIsSilentWhenTapWorks() {

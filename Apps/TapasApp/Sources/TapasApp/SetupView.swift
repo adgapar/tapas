@@ -194,7 +194,7 @@ struct SetupView: View {
                         Capsule().fill(Grafico.saffron.opacity(0.7)).overlay(Capsule().stroke(Grafico.ink, lineWidth: 1))
                             .frame(width: 9, height: 60).padding(.trailing, 21).offset(y: 70)
                     }
-                }.buttonStyle(.plain).accessibilityLabel("Push the door to enter Tapas")
+                }.buttonStyle(.plain).accessibilityLabel("Push the door to enter tapas")
                     .disabled(openingDoor)
                     .rotation3DEffect(.degrees(openingDoor ? 100 : 0), axis: (x: 0, y: 1, z: 0), anchor: .leading, perspective: 0.45)
                     .animation(reducedMotion ? nil : .easeInOut(duration: 1.05), value: openingDoor)
@@ -232,7 +232,7 @@ struct SetupView: View {
             Text("Practice stays here. Nothing was pasted or saved.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
             ReceiptRule()
             assistantSetup
-            Button("Open Tapas →") {
+            Button("Open tapas →") {
                 withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
             }.buttonStyle(GraficoButtonStyle()).disabled(leavingBar || model.busy)
         }
@@ -261,8 +261,8 @@ struct SetupView: View {
             Text("Acta saves audio transcripts, never screen images. Meeting audio can wait until your first meeting. Buttons work without Accessibility.")
                 .font(.system(size: 11)).foregroundStyle(Grafico.muted).lineSpacing(2)
             if model.accessibilityChecked && !model.flow.accessibilityTrusted {
-                Text("Enable Tapas in System Settings → Privacy & Security → Accessibility, then check again.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                Button("Show Tapas in Finder", action: onRevealApplication).buttonStyle(.plain)
+                Text("Enable **tapas** in System Settings → Privacy & Security → Accessibility, then check again.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+                Button("Show tapas in Finder", action: onRevealApplication).buttonStyle(.plain)
             }
             Button("Check permissions again", action: onRecheckAccessibility).buttonStyle(.plain).font(.system(size: 11))
             primary("Continue →")
@@ -277,7 +277,7 @@ struct SetupView: View {
             }.padding(14).background(Grafico.paper, in: RoundedRectangle(cornerRadius: 9))
             Label("dictado · saved takes", systemImage: "folder").font(.system(size: 12))
             Label("acta · meeting transcripts", systemImage: "folder").font(.system(size: 12))
-            Text("Tapas creates these subfolders for you. Existing files stay where they are.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
+            Text("**tapas** creates these subfolders for you. Existing files stay where they are.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
             if let error = model.folderError { NoticeBox(text: error, error: true) }
             if model.folderConfirmed { NoticeBox(text: "Folder selected. Both tools use this location.") }
             else { Button("Use Documents/tapas", action: onDefaultFolder).buttonStyle(GraficoButtonStyle(secondary: true)) }
@@ -314,16 +314,19 @@ struct SetupView: View {
             }
             ReceiptRule()
             assistantSetup
-            primary(model.completedPractice ? "Lovely. Let’s begin →" : "Open Tapas →", disabled: model.phase.isActive)
+            primary(model.completedPractice ? "Lovely. Let’s begin →" : "Open tapas →", disabled: model.phase.isActive)
         }
     }
 
     private var assistantSetup: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Use with your AI assistant · optional").font(.system(size: 13, weight: .medium))
-            Text("Find recordings and ask questions about them with Claude Code, Codex or Cursor.")
+            Text("Install the **tapas** skill so your assistant can find recordings and use templates for notes and reviews. Edit templates yourself or ask your assistant to change them.")
                 .font(.system(size: 11)).foregroundStyle(Grafico.muted)
             AssistantSetupView(model: model.assistant, onAction: onAssistantAction)
+                .disabled(model.busy || model.phase.isActive || leavingBar)
+            Button("Open templates") { onAssistantAction("templates") }
+                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Grafico.olive)
                 .disabled(model.busy || model.phase.isActive || leavingBar)
         }
     }

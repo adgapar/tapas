@@ -9,7 +9,7 @@ import Testing
 
 @Test func peekIntroStatesWhatTapasIs() {
     let flow = SetupFlow(phase: .peek)
-    #expect(flow.speech == "Tapas")
+    #expect(flow.speech == "tapas")
     #expect(flow.primaryTitle == "Show me")
     #expect(flow.body.contains("plate"))
     #expect(flow.body.contains("Dictado"))

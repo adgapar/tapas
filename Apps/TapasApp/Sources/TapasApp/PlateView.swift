@@ -73,7 +73,7 @@ struct PlateView: View {
             ReceiptTrim()
             HStack(alignment: .center, spacing: 15) {
                 Button { navigate("Tools") } label: { TapasWordmark(size: 23) }
-                    .buttonStyle(.plain).accessibilityLabel("Tapas, all tools")
+                    .buttonStyle(.plain).accessibilityLabel("tapas, all tools")
                 Spacer()
                 Menu {
                     Button("All tools") { navigate("Tools") }
@@ -83,9 +83,9 @@ struct PlateView: View {
                     Button("Setup", action: actions.setup)
                     Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
                     Divider()
-                    Button("Quit Tapas", action: actions.quit)
+                    Button("Quit tapas", action: actions.quit)
                 } label: { Image(systemName: "ellipsis").font(.system(size: 18)) }
-                    .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Tapas menu")
+                    .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("tapas menu")
                 ClosePlateButton(action: actions.close)
             }.padding(.horizontal, homeSelected ? 18 : 22).padding(.top, 12).padding(.bottom, 8)
             if !homeSelected {
@@ -309,7 +309,7 @@ struct PlateView: View {
                     .font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 AssistantSetupView(model: model.assistant, onAction: actions.assistantAction)
                 Button("Open templates") { actions.assistantAction("templates") }
-                Text("Make meeting notes your own. Edit or add Markdown templates; your assistant reads them when you ask. Existing files are preserved.")
+                Text("Your assistant uses these templates for notes and reviews. Edit them yourself or ask your assistant to change them. **tapas** preserves your edits.")
                     .font(.system(size: 11)).foregroundStyle(Grafico.muted)
                 HStack {
                     Button("Remove") { actions.assistantAction("remove") }
@@ -329,7 +329,7 @@ struct PlateView: View {
                     PreferenceToggle("Download automatically", isOn: Binding(get: { model.updates.automaticallyDownloads }, set: { actions.setUpdateDownloads($0) }))
                         .disabled(!model.updates.automaticallyChecks)
                     Text("Install updates in the app. Recording and unsaved words take priority over restarting.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                    if model.updates.waitingForRecording { NoticeBox(text: "An update is ready. Finish or recover your recording before Tapas restarts.") }
+                    if model.updates.waitingForRecording { NoticeBox(text: "An update is ready. Finish or recover your recording before tapas restarts.") }
                     Button("Check for Updates…", action: actions.checkForUpdates).disabled(!model.updates.canCheck)
                         .padding(.bottom, 3)
                 }

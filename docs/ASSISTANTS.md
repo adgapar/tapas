@@ -30,6 +30,13 @@ or edit a `.md` file yourself, or ask your assistant to customize it. Your assis
 reads the selected files when running a task; library edits need no skill reinstall.
 Update an older installed skill once to teach it this workflow.
 
+Ask for the result naturally, such as “Make notes from yesterday's meeting.” The
+skill guides your assistant to choose a matching playbook and template, including
+custom files, without requiring you to name one. You can also ask “Show my Tapas
+templates” for links, or “Add a Risks section to my meeting-notes template” to
+change future notes. Onboarding explains this when offering assistant setup, with
+an Open templates shortcut. The same folder shortcut is available in Preferences.
+
 Starters include meeting notes, customer interviews, and project updates, with
 playbooks for meeting notes, weekly reviews, polishing saved dictation, and
 learning useful workflows from your history. Try:

@@ -58,7 +58,7 @@ final class AppUpdater: NSObject, SPUUpdaterDelegate {
 
     func updater(_ updater: SPUUpdater, mayPerform updateCheck: SPUUpdateCheck) throws {
         if isBusy() {
-            throw NSError(domain: "work.tapas.updates", code: 1, userInfo: [NSLocalizedDescriptionKey: "Finish or recover your recording before updating Tapas."])
+            throw NSError(domain: "work.tapas.updates", code: 1, userInfo: [NSLocalizedDescriptionKey: "Finish or recover your recording before updating tapas."])
         }
     }
 

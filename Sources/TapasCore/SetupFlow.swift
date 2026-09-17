@@ -77,7 +77,7 @@ public struct SetupFlow: Equatable, Sendable {
     public var speech: String {
         switch phase {
         case .peek:
-            return "Tapas"
+            return "tapas"
         case .microphone:
             return "I need the mic."
         case .accessibility:

@@ -36,7 +36,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
                                     styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
         configureFloatingWindow(window)
         super.init(window: window)
-        window.title = "A first taste of Tapas"
+        window.title = "A first taste of tapas"
         window.isReleasedWhenClosed = false
         window.delegate = self
         let setupModel = model
@@ -139,7 +139,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
 
     func assistantAction(_ action: String) {
         guard model.stage == 3, !model.busy, !model.phase.isActive,
-              action == "install" || action == "refresh" else { return }
+              action == "install" || action == "refresh" || action == "templates" else { return }
         onAssistantAction?(action)
     }
 
@@ -148,7 +148,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         model.busy = true
         model.flow.microphoneGranted = await allowMicrophone?() ?? false
         model.busy = false
-        model.flow.modelError = model.flow.microphoneGranted ? nil : "Allow Tapas in System Settings → Privacy & Security → Microphone, then return here."
+        model.flow.modelError = model.flow.microphoneGranted ? nil : "Allow tapas in System Settings → Privacy & Security → Microphone, then return here."
     }
 
     private func prepare() async {

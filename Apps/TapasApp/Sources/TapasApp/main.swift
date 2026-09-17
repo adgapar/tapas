@@ -16,7 +16,7 @@ enum Tapas {
                 // Use the last location published by the GUI; command-line defaults
                 // can have a different bundle domain from the running app.
                 guard FileManager.default.fileExists(atPath: LibraryLocation.file().path) else {
-                    fputs("Open Tapas once to publish your transcript folder, then retry.\n", stderr); exit(1)
+                    fputs("Open tapas once to publish your transcript folder, then retry.\n", stderr); exit(1)
                 }
                 let location = try JSONDecoder().decode(LibraryLocation.self, from: Data(contentsOf: LibraryLocation.file()))
                 guard location.schema_version == 1 else { throw CocoaError(.fileReadCorruptFile) }

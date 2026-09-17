@@ -90,9 +90,12 @@ import Testing
     #expect(controller.model.assistant.status == "Installed")
     #expect(controller.model.flow.phase == .tryIt)
     #expect(completions == 0)
+    controller.assistantAction("templates")
+    #expect(actions == ["install", "templates"])
     controller.model.phase = .listening
     controller.assistantAction("install")
-    #expect(actions.count == 1)
+    controller.assistantAction("templates")
+    #expect(actions.count == 2)
     controller.model.phase = .idle
     await controller.primary()
     #expect(completions == 1)

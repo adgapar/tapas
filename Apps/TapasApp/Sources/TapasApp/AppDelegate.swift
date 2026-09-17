@@ -158,18 +158,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func configureApplicationMenu() {
         let bar = NSMenu()
         let appItem = NSMenuItem()
-        let appMenu = NSMenu(title: "Tapas")
+        let appMenu = NSMenu(title: "tapas")
         func add(_ title: String, _ action: Selector, _ key: String = "") {
             let item = appMenu.addItem(withTitle: title, action: action, keyEquivalent: key)
             item.target = self
         }
-        add("Show Tapas", #selector(showPlate), "0")
+        add("Show tapas", #selector(showPlate), "0")
         add("Preferences…", #selector(showPreferences), ",")
         add("Setup…", #selector(openSetup))
         add("Check for Updates…", #selector(checkForUpdates))
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "Hide Tapas", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "Quit Tapas", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "Hide tapas", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "Quit tapas", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         bar.addItem(appItem)
         let editItem = NSMenuItem()
@@ -457,7 +457,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func chooseTranscriptFolder() {
         let panel = NSOpenPanel()
         panel.title = "Choose your transcript folder"
-        panel.message = "Tapas creates dictado and acta subfolders here for new recordings."
+        panel.message = "tapas creates dictado and acta subfolders here for new recordings."
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
@@ -487,7 +487,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 reloadHistory()
             }
         } catch {
-            model.folderError = "Tapas couldn’t write to that folder. Choose a writable location. Your current folder is unchanged."
+            model.folderError = "tapas couldn’t write to that folder. Choose a writable location. Your current folder is unchanged."
             setup?.model.folderError = model.folderError
         }
     }
@@ -649,9 +649,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if model.snapshot.phase.isActive || model.snapshot.phase == .recovery {
             let alert = NSAlert()
             alert.messageText = model.snapshot.phase == .recovery ? "Quit with words still waiting?" : "Quit during this take?"
-            alert.informativeText = "Unsaved words will be lost. Stay in Tapas to finish, copy or export them."
-            alert.addButton(withTitle: "Stay in Tapas")
-            alert.addButton(withTitle: "Quit Tapas")
+            alert.informativeText = "Unsaved words will be lost. Stay in tapas to finish, copy or export them."
+            alert.addButton(withTitle: "Stay in tapas")
+            alert.addButton(withTitle: "Quit tapas")
             return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
         }
         return .terminateNow

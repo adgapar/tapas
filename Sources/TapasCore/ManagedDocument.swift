@@ -45,6 +45,6 @@ enum ManagedDocument {
 public enum LibraryFileError: LocalizedError {
     case conflict(String)
     public var errorDescription: String? {
-        switch self { case .conflict(let path): "Tapas left an existing, edited, or linked file unchanged: \(path). Move it aside to let Tapas create its own copy." }
+        switch self { case .conflict(let path): "tapas left an existing, edited, or linked file unchanged: \(path). Move it aside to let tapas create its own copy." }
     }
 }

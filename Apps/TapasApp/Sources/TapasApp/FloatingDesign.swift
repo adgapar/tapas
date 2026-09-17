@@ -51,7 +51,7 @@ struct TapasWordmark: View {
             PintxoMark().frame(width: size, height: size * 1.2)
             Text("tapas").font(.system(size: size, weight: .heavy)).tracking(-1.6)
             Text("/").font(.system(size: size, weight: .heavy)).foregroundStyle(Grafico.paprika)
-        }.foregroundStyle(Grafico.ink).accessibilityElement(children: .ignore).accessibilityLabel("Tapas")
+        }.foregroundStyle(Grafico.ink).accessibilityElement(children: .ignore).accessibilityLabel("tapas")
     }
 }
 
@@ -75,7 +75,7 @@ extension View {
 }
 
 struct ClosePlateButton: View {
-    var label = "Close Tapas"
+    var label = "Close tapas"
     var action: () -> Void
     var body: some View {
         Button(action: action) { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).frame(width: 28, height: 28) }

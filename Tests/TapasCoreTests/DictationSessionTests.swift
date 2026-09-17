@@ -95,7 +95,7 @@ func quiet() -> [Float] { [Float](repeating: 0, count: 320) }
     #expect(paster.pasted.isEmpty)
     #expect(
         await session.snapshot().message
-            == "Microphone is off. Open System Settings to allow Tapas."
+            == "Microphone is off. Open System Settings to allow tapas."
     )
 }
 

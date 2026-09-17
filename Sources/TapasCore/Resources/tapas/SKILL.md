@@ -46,6 +46,16 @@ Markdown instructions shared by all assistants. List their `.md` files when
 choosing a workflow; read only the selected playbook and template. Honor an
 explicit user choice first. Paths below are relative to `current_root`.
 
+Use a matching playbook and template as part of fulfilling the request; the user
+does not need to mention these files or ask to use a template. Inspect available
+template titles and guidance, including user-added files, and choose the closest
+fit. Use the general meeting-notes template for an ordinary meeting recap when
+no more specific match is clear. Do not require a template-selection step for a
+routine request. Re-read selected library files for each new task so edits apply.
+If the user asks what is available, list the relevant options with links to their
+actual library files. When asked to change the format for future notes, update
+the relevant library template within the requested scope.
+
 | Request | Playbook |
 | --- | --- |
 | Meeting or customer interview notes | `playbooks/meeting-notes.md` |

@@ -12,7 +12,7 @@ final class PlateWindowController: NSWindowController, NSWindowDelegate {
         self.model = model
         let window = FloatingWindow(contentRect: NSRect(origin: .zero, size: model.preferredWindowSize),
                                     styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
-        window.title = "Tapas"
+        window.title = "tapas"
         configureFloatingWindow(window)
         super.init(window: window)
         window.contentViewController = NSHostingController(rootView: PlateWindowContent(model: model, actions: actions, actaController: actaController, onResize: { [weak self] in self?.resizeForCurrentPage() }))

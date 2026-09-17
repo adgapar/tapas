@@ -110,7 +110,7 @@ final class ActaController: NSObject, NSWindowDelegate {
     func allowAppAudio() async {
         guard !model.busy, !model.hasSession else { return }
         model.appAudioGranted = CGRequestScreenCaptureAccess()
-        if !model.appAudioGranted { model.error = "Allow Tapas in System Settings → Privacy & Security → Screen & System Audio Recording. If macOS asks you to reopen Tapas, do so, then return to Acta." }
+        if !model.appAudioGranted { model.error = "Allow tapas in System Settings → Privacy & Security → Screen & System Audio Recording. If macOS asks you to reopen tapas, do so, then return to Acta." }
     }
 
     func openAppAudioSettings() {
