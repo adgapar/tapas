@@ -106,6 +106,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         }
         meetingPrompt.actaInProgress = { [weak self] in self?.acta.model.hasSession == true }
         meetingPrompt.onStart = { [weak self] app in Task { await self?.acta.startSuggested(app) } }
+        meetingPrompt.monitorsMeeting = { [weak self] in self?.acta.monitorsMeeting == true }
+        meetingPrompt.onActivity = { [weak self] apps, now in await self?.acta.meetingActivityChanged(apps, now: now) }
         meetingPrompt.onAvailability = { [weak self] message in self?.model.meetingDetectionError = message }
         meetingPrompt.start()
         updater.isBusy = { [weak self] in

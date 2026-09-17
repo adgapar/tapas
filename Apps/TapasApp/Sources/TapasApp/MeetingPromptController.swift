@@ -12,6 +12,8 @@ final class MeetingPromptController {
     var actaInProgress: () -> Bool = { false }
     var onStart: (MicrophoneApp) -> Void = { _ in }
     var onAvailability: (String?) -> Void = { _ in }
+    var monitorsMeeting: () -> Bool = { false }
+    var onActivity: ([MicrophoneApp]?, TimeInterval) async -> Void = { _, _ in }
     private var policy = MeetingPromptPolicy()
     private var task: Task<Void, Never>?
     private var panel: NSPanel?
@@ -36,13 +38,14 @@ final class MeetingPromptController {
     }
 
     private func poll() async {
-        guard enabled else { return }
+        guard enabled || monitorsMeeting() else { return }
         let result = await Task.detached(priority: .utility) { Result { try MicrophoneActivity.read() } }.value
-        guard !Task.isCancelled, enabled else { return }
+        guard !Task.isCancelled, enabled || monitorsMeeting() else { return }
         guard case let .success(processes) = result else {
             dismiss()
             onAvailability("Microphone detection is unavailable. You can still start Acta from Tools.")
             // An unreadable snapshot is not evidence that a meeting ended.
+            await onActivity(nil, ProcessInfo.processInfo.systemUptime)
             return
         }
         onAvailability(nil)
@@ -58,6 +61,8 @@ final class MeetingPromptController {
                 ownPID: ProcessInfo.processInfo.processIdentifier, ownBundleID: ownBundle) { active[app.bundleID] = app }
         }
         let now = ProcessInfo.processInfo.systemUptime
+        await onActivity(Array(active.values), now)
+        guard enabled else { return }
         let allowed = canPrompt()
         let inProgress = actaInProgress()
         if let suggested, active[suggested.bundleID]?.pid != suggested.pid || !allowed || inProgress { dismiss() }
@@ -113,7 +118,7 @@ struct MeetingPromptView: View {
                     Button(ready ? "Record meeting" : "Set up & record", action: start).buttonStyle(GraficoButtonStyle())
                     Button("Not now", action: dismiss).buttonStyle(.plain)
                 }.font(.system(size: 12))
-                Text("Start when everyone is ready to be recorded.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
+                Text("Start when everyone is ready to be recorded. Saves automatically 30 seconds after this app stops using the microphone.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
             }.plateSurface()
             PintxoWaveform().scaleEffect(0.65).frame(width: 90, height: 70).padding(.trailing, 20)
         }.padding(10).frame(width: 400, height: 300).foregroundStyle(Grafico.ink).preferredColorScheme(.light)

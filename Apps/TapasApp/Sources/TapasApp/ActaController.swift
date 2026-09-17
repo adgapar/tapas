@@ -52,6 +52,8 @@ final class ActaController: NSObject, NSWindowDelegate {
     private var companion: NSPanel?
     private var canResumeCapture = false
     private var captureFailure: String?
+    private var meetingEndPolicy: MeetingEndPolicy?
+    var monitorsMeeting: Bool { meetingEndPolicy != nil }
     var permissionStatus: () -> (microphone: Bool, appAudio: Bool) = {
         (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized, CGPreflightScreenCaptureAccess())
     }
@@ -86,6 +88,23 @@ final class ActaController: NSObject, NSWindowDelegate {
         guard !model.hasSession else { show(); return }
         guard model.ready, model.microphoneGranted, model.appAudioGranted else { show(); return }
         await start()
+        if model.snapshot.phase == .recording {
+            meetingEndPolicy = MeetingEndPolicy(app: app)
+        }
+    }
+
+    func meetingActivityChanged(_ apps: [MicrophoneApp]?, now: TimeInterval) async {
+        guard !model.busy else {
+            _ = meetingEndPolicy?.shouldFinish(activeApps: nil, now: now)
+            return
+        }
+        guard [.recording, .paused].contains(model.snapshot.phase) else {
+            meetingEndPolicy = nil
+            return
+        }
+        if meetingEndPolicy?.shouldFinish(activeApps: apps, now: now) == true {
+            await finish()
+        }
     }
 
     func show() {
@@ -188,6 +207,7 @@ final class ActaController: NSObject, NSWindowDelegate {
 
     func finish() async {
         guard !model.busy, let session, model.hasSession else { return }
+        meetingEndPolicy = nil
         model.busy = true
         model.error = nil
         defer { model.busy = false }
@@ -268,6 +288,7 @@ final class ActaController: NSObject, NSWindowDelegate {
         alert.addButton(withTitle: "Keep meeting")
         alert.addButton(withTitle: "Discard meeting")
         guard alert.runModal() == .alertSecondButtonReturn else { return }
+        meetingEndPolicy = nil
         model.busy = true
         defer { model.busy = false }
         do { try await session.discard(); model.error = nil; canResumeCapture = false }

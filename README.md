@@ -53,6 +53,12 @@ interview, or discussion, with your microphone and meeting audio in one transcri
 
 Tapas can offer to open Acta when another app uses the microphone. Recording
 starts only when you choose it. No meeting bot or calendar connection is needed.
+Recordings started from that suggestion finish and save automatically after the
+meeting app stops using the microphone for 30 seconds. Brief interruptions and
+unavailable detection reset that timer. Recordings started manually still finish
+when you choose Finish. Detection tracks the app, so another tab using its
+microphone can keep recording active; a mute that releases the microphone for
+30 seconds can also trigger saving.
 
 ## Your words stay useful
 
