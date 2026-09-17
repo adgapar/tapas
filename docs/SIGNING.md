@@ -94,8 +94,10 @@ TAPAS_NOTARY_PROFILE=tapas TAPAS_RELEASE_LABEL=0.1.1 \
 
 This signs, notarizes and staples both the app and DMG, then verifies Gatekeeper
 acceptance and writes a SHA-256 checksum. To reuse a previously packaged app,
-set `TAPAS_PACKAGED_APP=dist/developer-id/Tapas.app`. Existing release files are never
-overwritten. Signing and notarization do not publish a release.
+set `TAPAS_PACKAGED_APP=dist/developer-id/Tapas.app`. Existing versioned release files
+are never overwritten. Each successful build also refreshes an identical copy at
+`dist/releases/tapas.dmg` and its `tapas.dmg.sha256` checksum for the public download.
+Signing and notarization do not publish a release.
 
 ## Automatic updates
 
@@ -118,7 +120,10 @@ For every release:
    Scripts/prepare-update.sh dist/releases/Tapas-0.1.1-arm64.dmg v0.1.1
    ```
 
-4. Upload the DMG and checksum to that version’s GitHub release, and publish it.
+4. Upload the versioned DMG and checksum, plus the matching `dist/releases/tapas.dmg`
+   and `dist/releases/tapas.dmg.sha256`, to that version’s GitHub release, and publish it.
+   Always use the lowercase filename `tapas.dmg` so the public download URL stays
+   `https://github.com/adgapar/tapas/releases/latest/download/tapas.dmg`.
 5. Upload the generated `dist/updates/v0.1.1/appcast.xml` to the public
    `updates` release, replacing its previous appcast only after the DMG is live.
 6. Verify the public feed and download, then check from an older installed build.

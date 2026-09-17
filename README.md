@@ -6,7 +6,7 @@
 <p align="center"><strong>Small tools. Good company.</strong></p>
 <p align="center">Local dictation and meeting transcripts for Mac.</p>
 <p align="center">
-  <a href="https://github.com/adgapar/tapas/releases/latest"><strong>Download for Mac</strong></a>
+  <a href="https://github.com/adgapar/tapas/releases/latest/download/tapas.dmg"><strong>Download for Mac</strong></a>
   · <a href="https://github.com/adgapar/tapas/releases/tag/v0.2.2">What’s new</a>
 </p>
 <p align="center">Apple silicon · macOS 15 or later</p>

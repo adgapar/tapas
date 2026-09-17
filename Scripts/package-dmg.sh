@@ -81,7 +81,12 @@ fi
 hdiutil verify "$STAGING/Tapas.dmg"
 mv "$STAGING/Tapas.dmg" "$DMG"
 (cd "$DESTINATION" && shasum -a 256 "$(basename "$DMG")" > "$(basename "$DMG").sha256")
+# Keep the versioned updater artifact and refresh the stable public download.
+cp "$DMG" "$STAGING/tapas.dmg"
+mv -f "$STAGING/tapas.dmg" "$DESTINATION/tapas.dmg"
+(cd "$DESTINATION" && shasum -a 256 tapas.dmg > tapas.dmg.sha256)
 echo "Installer built: $DMG"
+echo "Public download: $DESTINATION/tapas.dmg"
 if [ -n "${TAPAS_NOTARY_PROFILE:-}" ]; then
     echo "App and disk image are Developer ID signed, notarized and stapled."
 else
