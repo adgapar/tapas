@@ -16,7 +16,7 @@ let package = Package(
     dependencies: [
         .package(path: "../.."),
         .package(url: "https://github.com/sparkle-project/Sparkle", exact: "2.10.0"),
-        .package(url: "https://github.com/Desert-Ant-Labs/desert-ant-core.git", from: "3.1.0"),
+        .package(url: "https://github.com/Desert-Ant-Labs/desert-ant-core.git", exact: "3.3.0"),
     ],
     targets: [
         .executableTarget(
