@@ -30,6 +30,7 @@ let package = Package(
                 .product(name: "Redact", package: "desert-ant-core"),
             ],
             exclude: ["Info.plist"],
+            resources: [.copy("Resources/Fonts")],
             linkerSettings: [.unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"])]
         ),
         .testTarget(name: "TapasAppTests", dependencies: ["TapasApp"], swiftSettings: testSettings),

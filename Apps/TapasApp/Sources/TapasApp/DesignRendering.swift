@@ -188,17 +188,27 @@ enum DesignRendering {
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "A little less busy. A little more room for the good ideas.", rms: 0.08, phase: .listening)
         for phase in [DictationPhase.starting, .listening, .finishing, .delivered] {
             overlay.snapshot.phase = phase
-            try saveHosted(DictadoOverlay(model: overlay, actions: actions).transaction { $0.animation = nil; $0.disablesAnimations = true }, size: NSSize(width: 124, height: 28), to: directory.appendingPathComponent("dictado-\(phase.rawValue).png"))
+            try saveHosted(DictadoOverlay(model: overlay, actions: actions).transaction { $0.animation = nil; $0.disablesAnimations = true }, size: DictadoMetrics.signal, to: directory.appendingPathComponent("dictado-\(phase.rawValue).png"))
         }
         overlay.snapshot.phase = .listening
-        try saveHosted(DictadoCaption(model: overlay), size: NSSize(width: 340, height: 62), to: directory.appendingPathComponent("dictado-caption.png"))
-        try saveHosted(DictadoControls(model: overlay, actions: actions), size: NSSize(width: 190, height: 32), to: directory.appendingPathComponent("dictado-controls.png"))
+        try saveHosted(DictadoCaption(model: overlay), size: DictadoMetrics.caption, to: directory.appendingPathComponent("dictado-caption.png"))
+        try saveHosted(DictadoControls(model: overlay, actions: actions), size: DictadoMetrics.controls, to: directory.appendingPathComponent("dictado-controls.png"))
         let study = VStack(spacing: 4) {
             DictadoSignal(model: overlay, actions: actions)
             DictadoControls(model: overlay, actions: actions)
-            DictadoCaption(model: overlay).padding(.top, 4)
-        }.padding(30).frame(width: 420, height: 210).background(Grafico.paper)
-        try saveHosted(study.transaction { $0.animation = nil; $0.disablesAnimations = true }, size: NSSize(width: 420, height: 210), to: directory.appendingPathComponent("dictado-study.png"))
+            DictadoCaption(model: overlay)
+        }.padding(30).frame(width: 460, height: 260).background(Sobremesa.paperShade)
+        try saveHosted(study.transaction { $0.animation = nil; $0.disablesAnimations = true }, size: NSSize(width: 460, height: 260), to: directory.appendingPathComponent("dictado-study.png"))
+        // The pintxo forms, large, for review against the Sobremesa style sheet.
+        let forms: [(String, PintxoForm, CGFloat, Double?)] = [("resting", .resting, 0, nil), ("filling", .resting, 0, 0.55),
+                                                              ("standing", .standing(split: false), 0.7, nil), ("call", .standing(split: true), 0.8, nil),
+                                                              ("working", .working, 0, nil)]
+        for (name, form, level, progress) in forms {
+            let view = SkewerPintxo(form: form, level: level, others: 0.05, progress: progress)
+                .frame(width: 240, height: 240).background(Sobremesa.paper)
+                .transaction { $0.animation = nil; $0.disablesAnimations = true }
+            try saveHosted(view, size: NSSize(width: 240, height: 240), to: directory.appendingPathComponent("pintxo-\(name).png"))
+        }
         overlay.snapshot = OverlaySnapshot(isVisible: true, committedText: "Nos vemos en la terraza a las seis.", message: "Paste wasn’t available. Copy your words or retry in the original app.", phase: .recovery, pasteFailed: true)
         try saveHosted(DictadoOverlay(model: overlay, actions: actions), size: NSSize(width: 384, height: 370), to: directory.appendingPathComponent("dictado-recovery.png"))
         overlay.snapshot = OverlaySnapshot(isVisible: true, message: "No words came through. Nothing saved. Try another take.", phase: .failed)

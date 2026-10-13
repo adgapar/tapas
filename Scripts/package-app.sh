@@ -9,6 +9,8 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp Apps/TapasApp/.build/release/Tapas "$APP/Contents/MacOS/Tapas"
 # SwiftPM locates this in the main app resource directory.
 ditto Apps/TapasApp/.build/release/Tapas_TapasCore.bundle "$APP/Contents/Resources/Tapas_TapasCore.bundle"
+# Bundled Fraunces (SIL Open Font License) for the Sobremesa display type.
+ditto Apps/TapasApp/.build/release/TapasApp_TapasApp.bundle "$APP/Contents/Resources/TapasApp_TapasApp.bundle"
 SPARKLE=Apps/TapasApp/.build/artifacts/sparkle/Sparkle
 mkdir -p "$APP/Contents/Frameworks"
 ditto "$SPARKLE/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework" "$APP/Contents/Frameworks/Sparkle.framework"
@@ -16,6 +18,7 @@ cp Apps/TapasApp/Sources/TapasApp/Info.plist "$APP/Contents/Info.plist"
 mkdir -p "$APP/Contents/Resources/Notices"
 cp "$SPARKLE/LICENSE" "$APP/Contents/Resources/Notices/Sparkle-LICENSE.txt"
 cp NOTICE.md PRIVACY.md "$APP/Contents/Resources/Notices/"
+cp Apps/TapasApp/Sources/TapasApp/Resources/Fonts/Fraunces-OFL.txt "$APP/Contents/Resources/Notices/Fraunces-OFL.txt"
 cp Apps/TapasApp/.build/checkouts/desert-ant-core/LICENSE.md "$APP/Contents/Resources/Notices/Desert-Ant-LICENSE.md"
 cp Apps/TapasApp/.build/checkouts/desert-ant-core/THIRD_PARTY_NOTICES.md "$APP/Contents/Resources/Notices/Desert-Ant-THIRD-PARTY-NOTICES.md"
 cp Apps/TapasApp/.build/checkouts/swift-numerics/LICENSE.txt "$APP/Contents/Resources/Notices/Swift-Numerics-LICENSE.txt"

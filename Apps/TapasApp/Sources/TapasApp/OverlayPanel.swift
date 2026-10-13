@@ -2,9 +2,6 @@ import AppKit
 import SwiftUI
 import TapasCore
 
-// Explicitly select the property wrapper on SDKs that also export a State macro.
-private typealias StoredViewState<Value> = SwiftUI.State<Value>
-
 @MainActor @Observable
 final class OverlayModel {
     var snapshot = OverlaySnapshot()
@@ -19,73 +16,69 @@ final class OverlayModel {
         // Only the preview is shortened. The session retains the complete transcript.
         String(snapshot.committedText.split(whereSeparator: \.isWhitespace).suffix(10).joined(separator: " ").suffix(120))
     }
+    /// The caption split so the newest few words can be marked as they arrive.
+    var captionParts: (older: String, newest: String) {
+        let words = caption.split(whereSeparator: \.isWhitespace)
+        let cut = max(0, words.count - 3)
+        return (words[..<cut].joined(separator: " "), words[cut...].joined(separator: " "))
+    }
     var label: String {
         switch snapshot.phase {
         case .starting: "Starting"
         case .listening: "Listening"
         case .finishing: "Finishing"
-        case .delivered: "Listo ✓"
+        case .delivered: "Listo"
         default: "Dictado"
         }
     }
 }
 
-/// These are the same four ingredients throughout the transformation, in the same color order.
-struct PintxoVoiceMark: View {
-    var phase: DictationPhase
-    var rms: Float
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @StoredViewState private var spread = false
-    private let widths: [CGFloat] = [10, 14, 11, 8]
-    private let positions: [CGFloat] = [-8, -3, 3, 8]
-    private let colors = [Grafico.saffron, Grafico.cobalt, Grafico.paprika, Grafico.olive]
-
-    private var level: CGFloat { reduceMotion ? 0.45 : min(1, CGFloat(sqrt(max(0, rms))) * 2.5) }
-    var body: some View {
-        ZStack {
-            Capsule().fill(Grafico.card.opacity(0.7)).frame(width: 1, height: 23)
-                .rotationEffect(.degrees(-18)).opacity(spread ? 0 : 1)
-            ForEach(0..<4) { index in
-                RoundedRectangle(cornerRadius: index == 0 ? 2 : 1)
-                    .fill(colors[index]).frame(width: widths[index], height: 3)
-                    .scaleEffect(x: spread ? 0.35 + level * 1.05 : 1)
-                    .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: level)
-                    .rotationEffect(.degrees(spread ? 90 : -18))
-                    .offset(x: spread ? CGFloat(index) * 6 - 9 : 0, y: spread ? 0 : positions[index])
-            }
-        }
-        .frame(width: 28, height: 24)
-        .onAppear { updateForm() }
-        .onChange(of: phase) { _, _ in updateForm() }
-        .onChange(of: reduceMotion) { _, _ in updateForm() }
-        .accessibilityHidden(true)
-    }
-    private func updateForm() {
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.55)) { spread = phase == .listening }
+/// Fixed sizes. The signal never resizes during a take (BEHAVIORS.md, El borde).
+/// Each size includes the printed shadow offset below and to the right.
+enum DictadoMetrics {
+    static let tab = CGSize(width: 152, height: 40)
+    static let tabShadow = CGSize(width: 3, height: 4)
+    static let signal = CGSize(width: tab.width + tabShadow.width, height: tab.height + tabShadow.height)
+    static let controls = CGSize(width: 193, height: 37)
+    static let caption = CGSize(width: 384, height: 81)
+    static let controlsOffset: CGFloat = signal.height + 4
+    static func captionOffset(controlsShown: Bool) -> CGFloat {
+        controlsShown ? controlsOffset + controls.height + 4 : signal.height + 4
     }
 }
 
+/// Sobremesa Dictado signal: a printed ink tab hanging under the menu bar, with the
+/// pintxo standing on its pick while you talk and the state label in Fraunces.
 struct DictadoSignal: View {
     @Bindable var model: OverlayModel
     var actions: PlateActions
     @FocusState private var focused: Bool
 
+    private var level: CGFloat {
+        min(1, CGFloat(sqrt(max(0, model.snapshot.rms))) * 2.5)
+    }
+
     var body: some View {
         Button {
             if model.snapshot.phase == .listening { actions.talk() }
         } label: {
-            HStack(spacing: 6) {
-                PintxoVoiceMark(phase: model.snapshot.phase, rms: model.snapshot.rms)
-                Text(model.label).font(.system(size: 10, weight: .semibold)).fixedSize()
+            HStack(spacing: 8) {
+                SkewerPintxo(form: model.snapshot.phase.pintxoForm, level: level, onInk: true)
+                    .frame(width: 36, height: 36)
+                Text(model.label).font(Sobremesa.display(15, weight: 500, italic: true)).fixedSize()
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10).frame(width: 124, height: 28)
-            .foregroundStyle(Grafico.card)
-            .background(Grafico.ink, in: UnevenRoundedRectangle(topLeadingRadius: 4, bottomLeadingRadius: 10, bottomTrailingRadius: 10, topTrailingRadius: 4))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(focused ? Grafico.saffron : .clear, lineWidth: 2))
+            .padding(.leading, 6).padding(.trailing, 14)
+            .frame(width: DictadoMetrics.tab.width, height: DictadoMetrics.tab.height)
+            .foregroundStyle(Sobremesa.paperOnInk)
+            .background(CutShape(tight: 5, round: 18, corner: .hanging).fill(Sobremesa.ink))
+            .background(CutShape(tight: 5, round: 18, corner: .hanging).fill(Sobremesa.deepInk)
+                .offset(DictadoMetrics.tabShadow))
+            .overlay(CutShape(tight: 5, round: 18, corner: .hanging).inkBorder(focused ? Sobremesa.saffron : .clear, lineWidth: 2))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain).focused($focused)
+        .frame(width: DictadoMetrics.signal.width, height: DictadoMetrics.signal.height, alignment: .topLeading)
         .onChange(of: focused) { _, value in model.signalFocused = value }
         .help(model.snapshot.phase == .listening ? "\(model.shortcut) to finish · Esc to cancel" : model.label)
         .accessibilityLabel("Dictado: \(model.label)")
@@ -95,16 +88,30 @@ struct DictadoSignal: View {
     }
 }
 
+/// Live words in a printed paper card, set in Fraunces. The newest words are marked in saffron.
 struct DictadoCaption: View {
     @Bindable var model: OverlayModel
+
+    private var text: AttributedString {
+        let parts = model.captionParts
+        var older = AttributedString(parts.older.isEmpty ? "" : parts.older + " ")
+        older.foregroundColor = Sobremesa.ink
+        var newest = AttributedString(parts.newest)
+        newest.backgroundColor = Sobremesa.saffronTint
+        return older + newest
+    }
+
     var body: some View {
-        Text(model.caption).font(.system(size: 13)).lineSpacing(3)
+        let card = CutShape(tight: 4, round: 20)
+        Text(text).font(Sobremesa.display(18)).lineSpacing(2)
             .lineLimit(2).truncationMode(.head)
+            .foregroundStyle(Sobremesa.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14).frame(width: 340, height: 62)
-            .foregroundStyle(Grafico.ink)
-            .background(Grafico.card, in: RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Grafico.ink.opacity(0.16)))
+            .padding(.horizontal, 18)
+            .frame(width: DictadoMetrics.caption.width - 4, height: DictadoMetrics.caption.height - 5)
+            .printed(card)
+            .frame(width: DictadoMetrics.caption.width, height: DictadoMetrics.caption.height, alignment: .topLeading)
+            .accessibilityElement(children: .ignore)
             .accessibilityLabel("Live words: \(model.caption)")
     }
 }
@@ -114,14 +121,17 @@ struct DictadoControls: View {
     var actions: PlateActions
     @FocusState private var focused: String?
     var body: some View {
+        let shape = CutShape(tight: 4, round: 14)
         HStack(spacing: 14) {
             Button("Finish", action: actions.talk).focused($focused, equals: "finish")
-            Rectangle().fill(Grafico.card.opacity(0.3)).frame(width: 1, height: 12)
+            Rectangle().fill(Sobremesa.paperOnInk.opacity(0.3)).frame(width: 1, height: 12)
             Button("Esc · Cancel", action: actions.cancel).focused($focused, equals: "cancel")
         }
-        .font(.system(size: 11, weight: .medium)).buttonStyle(.plain)
-        .foregroundStyle(Grafico.card).padding(.horizontal, 14).frame(width: 190, height: 32)
-        .background(Grafico.ink, in: Capsule())
+        .font(.system(size: 11, weight: .semibold)).buttonStyle(.plain)
+        .foregroundStyle(Sobremesa.paperOnInk)
+        .frame(width: DictadoMetrics.controls.width - 3, height: DictadoMetrics.controls.height - 3)
+        .printed(shape, fill: Sobremesa.ink, outline: nil, shadow: Sobremesa.deepInk, offset: CGSize(width: 2, height: 3))
+        .frame(width: DictadoMetrics.controls.width, height: DictadoMetrics.controls.height, alignment: .topLeading)
         .onChange(of: focused) { _, value in model.controlsFocused = value != nil }
     }
 }
@@ -227,18 +237,18 @@ final class OverlayPanel: NSPanel {
             pinToCurrentScreen()
         }
         guard let screen = NSScreen.screens.first(where: { ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber) == screenNumber }) else { return }
-        let size = model.needsRecovery ? CGSize(width: 384, height: snapshot.phase == .recovery ? 370 : 250) : CGSize(width: 124, height: 28)
+        let size = model.needsRecovery ? CGSize(width: 384, height: snapshot.phase == .recovery ? 370 : 250) : DictadoMetrics.signal
         place(self, size: size, on: screen)
 
         let mouse = NSEvent.mouseLocation
         let hovered = NSMouseInRect(mouse, frame, false) || (controlsPanel.isVisible && NSMouseInRect(mouse, controlsPanel.frame, false))
         if hovered || model.signalFocused || model.controlsFocused { controlsUntil = now + 0.3 }
         let showControls = snapshot.phase == .listening && now < controlsUntil
-        if showControls { place(controlsPanel, size: CGSize(width: 190, height: 32), on: screen, offset: 32) }
+        if showControls { place(controlsPanel, size: DictadoMetrics.controls, on: screen, offset: DictadoMetrics.controlsOffset) }
         else { controlsPanel.orderOut(nil); model.controlsFocused = false }
 
         if model.showLiveWords && !model.caption.isEmpty && (snapshot.phase == .listening || snapshot.phase == .finishing) {
-            place(captionPanel, size: CGSize(width: 340, height: 62), on: screen, offset: showControls ? 72 : 36)
+            place(captionPanel, size: DictadoMetrics.caption, on: screen, offset: DictadoMetrics.captionOffset(controlsShown: showControls))
         } else { captionPanel.orderOut(nil) }
     }
 

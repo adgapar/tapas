@@ -37,3 +37,9 @@ Voz is NVIDIA Parakeet TDT 0.6B v3 (CC BY 4.0) converted to Core ML by Desert An
 Tapas uses [Sparkle](https://sparkle-project.org), the open-source macOS updater,
 under its MIT license. Sparkle and its bundled components’ license notices are
 included in the app at `Contents/Resources/Notices/Sparkle-LICENSE.txt`.
+
+## Fraunces
+
+Tapas bundles the [Fraunces](https://github.com/undercasetype/Fraunces) typeface,
+Copyright 2018 The Fraunces Project Authors, under the SIL Open Font License 1.1.
+The license is included in the app at `Contents/Resources/Notices/Fraunces-OFL.txt`.
