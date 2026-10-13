@@ -104,7 +104,7 @@ Signing and notarization do not publish a release.
 Tapas embeds Sparkle 2.10.0. Its HTTPS feed is
 `https://github.com/adgapar/tapas/releases/download/updates/appcast.xml`.
 The feed must be published before installed copies can check successfully.
-Automatic checks and downloads default to on and can be changed in Preferences.
+Automatic checks and downloads default to on and can be changed in House rules.
 Recording, recognition, recovery and first-time setup delay update checks/restarts.
 
 Store the EdDSA private signing key securely outside the repository. Only the

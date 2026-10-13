@@ -102,25 +102,32 @@ final class MeetingPromptController {
     }
 }
 
+/// "Keep this call?" Offered when another app starts using the microphone.
 struct MeetingPromptView: View {
     let appName: String
     var ready = true
     let start: () -> Void
     let dismiss: () -> Void
     var body: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            VStack(alignment: .leading, spacing: 12) {
-                TapasWordmark(size: 23)
-                Text("A conversation worth keeping?").font(.system(size: 20, weight: .bold))
-                Text("\(appName) is using your microphone. Acta can keep a transcript on your Mac.")
-                    .font(.system(size: 12)).fixedSize(horizontal: false, vertical: true)
+        HStack(alignment: .bottom, spacing: 6) {
+            VStack(alignment: .leading, spacing: 10) {
+                GroupLabel(text: "\(appName) is using your microphone")
+                Text("Keep this call?").font(Sobremesa.display(26, weight: 600))
+                Text("tapas records you and the other side, then saves a transcript on this Mac.")
+                    .font(.system(size: 13)).foregroundStyle(Sobremesa.ink.opacity(0.85)).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 16) {
-                    Button(ready ? "Record meeting" : "Set up & record", action: start).buttonStyle(GraficoButtonStyle())
-                    Button("Not now", action: dismiss).buttonStyle(.plain)
-                }.font(.system(size: 12))
-                Text("Start when everyone is ready to be recorded. Saves automatically 30 seconds after this app stops using the microphone.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
-            }.plateSurface()
-            PintxoWaveform().scaleEffect(0.65).frame(width: 90, height: 70).padding(.trailing, 20)
-        }.padding(10).frame(width: 400, height: 300).foregroundStyle(Grafico.ink).preferredColorScheme(.light)
+                    Button(ready ? "Keep it" : "Set up & keep", action: start).buttonStyle(.printed(.primary, small: true))
+                    Button("Not now", action: dismiss).buttonStyle(.printed(.quiet, small: true))
+                }.padding(.top, 2)
+                Text("Start when everyone is ready to be recorded. It saves by itself 30 seconds after the call stops using the microphone.")
+                    .font(.system(size: 11.5)).foregroundStyle(Sobremesa.muted).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(18)
+            .frame(width: 290, alignment: .leading)
+            .printed(CutShape(tight: 5, round: 22), offset: CGSize(width: 4, height: 5))
+            SkewerPintxo(form: .resting).frame(width: 74, height: 74).padding(.bottom, 4)
+        }
+        .padding(10).frame(width: 400, height: 300, alignment: .bottomTrailing)
+        .foregroundStyle(Sobremesa.ink).preferredColorScheme(.light)
     }
 }

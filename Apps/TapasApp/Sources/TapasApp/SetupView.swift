@@ -3,10 +3,11 @@ import TapasCore
 
 @MainActor @Observable
 final class SetupModel {
+    static let stepNames = ["Arrive", "Allow", "First take", "Acta", "House rules"]
     let assistant: AssistantSetupModel
     var flow: SetupFlow
     var stage = 0
-    var entered = false
+    var entered = true
     var isPresented = false
     var downloading = false
     var preparationStatus = ModelPreparationStatus()
@@ -23,19 +24,21 @@ final class SetupModel {
     init(flow: SetupFlow, assistant: AssistantSetupModel = AssistantSetupModel()) {
         self.assistant = assistant
         self.flow = flow
-        entered = flow.phase != .peek
         switch flow.phase {
-        case .peek: stage = 0
+        case .peek, .kitchen: stage = 0
         case .microphone, .accessibility: stage = 1
-        case .kitchen: stage = 2
-        case .tryIt, .finished: stage = 3
+        case .tryIt: stage = 2
+        case .finished: stage = 4
         }
     }
 }
 
+/// Onboarding in Sobremesa: five short steps on tinted grounds. The pintxo fills in while
+/// the speech model downloads, then stands up on its pick for the first take.
 struct SetupView: View {
     @Bindable var model: SetupModel
-    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    var plate: PlateModel = PlateModel()
+    var actions: PlateActions = .inert
     var onPrimary: () async -> Void
     var onSecondary: () -> Void
     var onSkip: () -> Void
@@ -52,345 +55,287 @@ struct SetupView: View {
     var onPrepare: () async -> Void = {}
     var onEntered: () -> Void = {}
     var onAssistantAction: (String) -> Void = { _ in }
-    var animateServing = true
-    private var openingDoorState = SwiftUI.State<Bool>(initialValue: false)
-    private var openingDoor: Bool {
-        get { openingDoorState.wrappedValue }
-        nonmutating set { openingDoorState.wrappedValue = newValue }
-    }
-    private var movingInsideState = SwiftUI.State<Bool>(initialValue: false)
-    private var movingInside: Bool {
-        get { movingInsideState.wrappedValue }
-        nonmutating set { movingInsideState.wrappedValue = newValue }
-    }
-    private var leavingBarState = SwiftUI.State<Bool>(initialValue: false)
-    private var leavingBar: Bool {
-        get { leavingBarState.wrappedValue }
-        nonmutating set { leavingBarState.wrappedValue = newValue }
-    }
+    var onStep: (Int) -> Void = { _ in }
+    var autoPrepare = true
 
-    private var servingReceipt: Bool { model.stage == 3 && model.completedPractice && !model.phase.isActive }
-    private var objectID: String { servingReceipt ? "receipt" : "step-\(model.stage)" }
+    private static let grounds = [Sobremesa.saffronTint, Sobremesa.cobaltTint, Sobremesa.paprikaTint, Sobremesa.oliveTint, Sobremesa.paper]
+    private var card: CGSize { CGSize(width: SetupWindowController.size.width - 24, height: SetupWindowController.size.height - 24) }
 
     var body: some View {
-        VStack(spacing: 12) {
-            if model.entered {
-                ZStack(alignment: .top) {
-                    SetupCounter()
-                    // Keep the paper on a solid counter; the whole scene never scrolls.
-                    VStack(spacing: 0) {
-                        Spacer().frame(height: 52)
-                        CounterServing(identity: objectID, paper: model.stage == 0 || servingReceipt, reducedMotion: reducedMotion || !animateServing) {
-                        VStack(alignment: .leading, spacing: model.stage == 0 || servingReceipt ? 10 : 8) {
-                            if servingReceipt { firstReceipt }
-                            else {
-                                if model.stage > 0 {
-                                    HStack { Eyebrow(text: "tapas / your place"); Spacer(); Eyebrow(text: "\(model.stage) / 3") }
-                                }
-                                content
-                                if let error = model.flow.modelError { NoticeBox(text: error, error: true) }
-                                if model.stage > 0 {
-                                    Spacer(minLength: 0)
-                                    HStack {
-                                        Button("← Back", action: onBack).disabled(model.phase.isActive || model.busy)
-                                        Spacer()
-                                        Button("Finish later", action: onSkip)
-                                    }.font(.system(size: 11)).buttonStyle(.plain).padding(.top, 6)
-                                }
-                            }
-                        }
-                        .frame(width: model.stage == 0 || servingReceipt ? 300 : 410, alignment: .leading)
-                        .frame(minHeight: model.stage > 0 && !servingReceipt ? 450 : nil, alignment: .top)
-                        .padding(.horizontal, model.stage == 0 ? 26 : 22)
-                        .padding(.vertical, model.stage == 0 ? 26 : 18)
-                        .background {
-                            if servingReceipt {
-                                ReceiptPaper().fill(Grafico.card).shadow(color: Grafico.ink.opacity(0.18), radius: 9, x: 5, y: 12)
-                            } else if model.stage == 0 {
-                                RoundedRectangle(cornerRadius: 2).fill(Grafico.card)
-                                    .overlay(RoundedRectangle(cornerRadius: 2).stroke(Grafico.ink.opacity(0.4), lineWidth: 0.8))
-                                    .shadow(color: Grafico.ink.opacity(0.2), radius: 0, x: 2, y: 4)
-                                    .shadow(color: Grafico.ink.opacity(0.18), radius: 12, x: 5, y: 14)
-                            } else { SetupNapkin() }
-                        }
-                        .rotationEffect(.degrees(model.stage == 0 || servingReceipt ? -2 : -0.5))
-                        .fixedSize(horizontal: false, vertical: true)
-                        }
-                        Spacer(minLength: 55)
-                    }
-                }
-                .overlay(alignment: .bottom) { counterControls.padding(.horizontal, 28).padding(.bottom, 13) }
-                .opacity(leavingBar ? 0 : 1)
-            } else {
-                entrance.frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 0) {
+            topBar
+            HStack(alignment: model.stage == 4 ? .top : .center, spacing: 30) {
+                art.frame(width: model.stage == 4 ? 130 : 270)
+                VStack(alignment: .leading, spacing: 16) { content }
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-        }.padding(22)
-            .frame(width: SetupWindowController.size.width, height: SetupWindowController.size.height)
-            .overlay(alignment: .topTrailing) {
-                if model.entered {
-                    HStack(spacing: 12) {
-                        Menu {
-                            Button("Replay entrance") {
-                                openingDoor = false; movingInside = false; model.entered = false
-                            }.disabled(model.phase.isActive || model.busy)
-                            Button("Finish later", action: onSkip)
-                        } label: { Image(systemName: "ellipsis") }
-                            .menuStyle(.borderlessButton).fixedSize().accessibilityLabel("Setup options")
-                        ClosePlateButton(label: "Close welcome", action: onSkip)
-                    }.padding(36)
-                }
-            }
-            .foregroundStyle(Grafico.ink).preferredColorScheme(.light)
-            .onChange(of: model.entered) { _, entered in if entered { onEntered() } }
-            .task(id: openingDoor) {
-                guard openingDoor else { return }
-                do {
-                    try await Task.sleep(for: .milliseconds(650))
-                    withAnimation(.easeIn(duration: 0.7)) { movingInside = true }
-                    try await Task.sleep(for: .milliseconds(750))
-                    guard !Task.isCancelled, model.isPresented else { return }
-                    model.entered = true
-                } catch { /* Closing setup cancels the entrance instead of navigating later. */ }
-            }
-            .task(id: leavingBar) {
-                guard leavingBar else { return }
-                do {
-                    if !reducedMotion { try await Task.sleep(for: .milliseconds(400)) }
-                    guard !Task.isCancelled, model.isPresented else { return }
-                    await onPrimary()
-                } catch { }
-            }
-            .onChange(of: model.isPresented) { _, presented in
-                if !presented { openingDoor = false; movingInside = false; leavingBar = false }
-            }
-            .onDisappear { openingDoor = false; movingInside = false; leavingBar = false }
-    }
-
-    private var counterControls: some View {
-        BrandCredit(color: Grafico.card.opacity(0.8)).frame(maxWidth: .infinity)
-    }
-
-    private var entrance: some View {
-        VStack(spacing: 22) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 95).fill(Grafico.olive.opacity(0.22))
-                VStack(spacing: 20) {
-                    Text("tapas /").font(.system(size: 30, weight: .bold)).foregroundStyle(Grafico.olive)
-                    Rectangle().fill(Grafico.olive).frame(height: 8)
-                    Rectangle().fill(Color(red: 0.64, green: 0.46, blue: 0.30)).frame(height: 120)
-                }.padding(.top, 140).clipShape(DoorArch())
-                Button(action: enterBar) {
-                    ZStack(alignment: .trailing) {
-                        DoorArch().fill(Grafico.paper.opacity(0.94))
-                            .overlay(DoorArch().stroke(Grafico.ink, lineWidth: 2))
-                        VStack(spacing: 13) {
-                            PintxoMark().frame(width: 76, height: 106)
-                            Text("tapas /").font(.system(size: 38, weight: .heavy)).tracking(-1.8)
-                            Text("Come on in.").font(.system(size: 23, design: .serif)).italic().padding(.top, 6)
-                            Text("A little room for your thoughts.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                            Spacer(minLength: 10)
-                            Eyebrow(text: "Push →")
-                            BrandCredit().padding(.top, 4)
-                        }.padding(.top, 42).padding(.bottom, 28).frame(maxWidth: .infinity)
-                        Capsule().fill(Grafico.saffron.opacity(0.7)).overlay(Capsule().stroke(Grafico.ink, lineWidth: 1))
-                            .frame(width: 9, height: 60).padding(.trailing, 21).offset(y: 70)
-                    }
-                }.buttonStyle(.plain).accessibilityLabel("Push the door to enter tapas")
-                    .disabled(openingDoor)
-                    .rotation3DEffect(.degrees(openingDoor ? 100 : 0), axis: (x: 0, y: 1, z: 0), anchor: .leading, perspective: 0.45)
-                    .animation(reducedMotion ? nil : .easeInOut(duration: 1.05), value: openingDoor)
-            }.frame(width: 270, height: 410)
-                .overlay(DoorArch().stroke(Grafico.olive, lineWidth: 11).allowsHitTesting(false))
-                .shadow(color: Grafico.ink.opacity(0.17), radius: 10, x: 4, y: 8)
-                .scaleEffect(movingInside ? 1.5 : 1).opacity(movingInside ? 0 : 1)
-            HStack(spacing: 24) {
-                Button("Close", action: onSkip)
-                    .foregroundStyle(Grafico.muted)
-                    .accessibilityLabel("Close welcome")
-                Button("Skip entrance") { model.entered = true }
-                    .fontWeight(.semibold)
-                    .foregroundStyle(Grafico.ink)
-                    .disabled(openingDoor)
-            }
-            .buttonStyle(.plain).font(.system(size: 12))
-            .padding(.horizontal, 8).padding(.vertical, 2).floatingLabel()
+            .padding(.leading, 30).padding(.trailing, 44).padding(.vertical, 18)
+            .frame(maxHeight: .infinity, alignment: model.stage == 4 ? .top : .center)
+        }
+        .frame(width: card.width, height: card.height)
+        .background(CutShape(tight: 8, round: 34).fill(Self.grounds[min(4, model.stage)]))
+        .animation(.easeInOut(duration: 0.5), value: model.stage)
+        .clipShape(CutShape(tight: 8, round: 34))
+        .overlay(CutShape(tight: 8, round: 34).inkBorder(Sobremesa.ink, lineWidth: Sobremesa.outline))
+        .background(CutShape(tight: 8, round: 34).fill(Sobremesa.ink).offset(x: 6, y: 7))
+        .frame(width: SetupWindowController.size.width, height: SetupWindowController.size.height, alignment: .topLeading)
+        .padding(.leading, 4).padding(.top, 4)
+        .foregroundStyle(Sobremesa.ink)
+        .preferredColorScheme(.light)
+        .task(id: model.stage) {
+            if autoPrepare, model.stage == 0, !model.flow.modelsReady, !model.downloading, model.flow.modelError == nil { await onPrepare() }
         }
     }
 
-    private func enterBar() {
-        if reducedMotion { model.entered = true }
-        else { openingDoor = true }
+    // MARK: Top bar
+
+    private var topBar: some View {
+        HStack(spacing: 18) {
+            ForEach(Array(SetupModel.stepNames.enumerated()), id: \.offset) { index, name in
+                Button { onStep(index) } label: {
+                    HStack(spacing: 8) {
+                        CutShape(tight: 2, round: 4)
+                            .fill(index == model.stage ? Sobremesa.ink : index < model.stage ? Sobremesa.olive : Sobremesa.paper)
+                            .overlay(CutShape(tight: 2, round: 4).inkBorder(Sobremesa.ink, lineWidth: 1.3))
+                            .frame(width: 13, height: 9).rotationEffect(.degrees(-19))
+                        Text(name).font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(index == model.stage ? Sobremesa.ink : Sobremesa.muted)
+                    }
+                }
+                .buttonStyle(.plain)
+                .disabled(index > model.stage || model.phase.isActive || model.busy)
+                .accessibilityLabel("Step \(index + 1) of 5, \(name)")
+            }
+            Spacer()
+            modelChip
+            Button(action: onSkip) { Image(systemName: "xmark").font(.system(size: 12, weight: .bold)).frame(width: 26, height: 26) }
+                .buttonStyle(.plain).accessibilityLabel("Finish setup later")
+        }
+        .padding(.leading, 30).padding(.trailing, 20).padding(.top, 22)
     }
 
-    private var firstReceipt: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Eyebrow(text: "tapas / your first words")
-            Text("Something\nto take with you.").font(.system(size: 28, design: .serif)).italic()
-            ReceiptRule()
-            ScrollView { Text(model.practiceText).font(.system(size: 20, design: .serif)).italic().lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading) }.frame(height: 70)
-            ReceiptRule()
-            Button("Try another thought") { Task { await onPractice() } }.buttonStyle(.plain).font(.system(size: 11)).disabled(model.busy)
-            Text("Practice stays here. Nothing was pasted or saved.").font(.system(size: 10)).foregroundStyle(Grafico.muted)
-            ReceiptRule()
-            assistantSetup
-            Button("Open tapas →") {
-                withAnimation(reducedMotion ? nil : .easeIn(duration: 0.4)) { leavingBar = true }
-            }.buttonStyle(GraficoButtonStyle()).disabled(leavingBar || model.busy)
+    private var downloadFraction: Double? {
+        if model.flow.modelsReady { return nil }
+        if model.downloading, model.preparationStatus.phase == .preparing { return 1 }
+        return model.preparationStatus.fraction ?? model.flow.downloadFraction
+    }
+
+    private var modelChip: some View {
+        Group {
+            if model.flow.modelsReady { DoneMark(text: "Speech model ready") }
+            else {
+                HStack(spacing: 8) {
+                    Text(model.downloading && model.preparationStatus.phase == .preparing ? "Preparing on this Mac" : "Speech model")
+                    ZStack(alignment: .leading) {
+                        CutShape(tight: 2, round: 4).fill(Sobremesa.paper)
+                        CutShape(tight: 2, round: 4).fill(Sobremesa.saffron).frame(width: 64 * (downloadFraction ?? 0))
+                    }
+                    .frame(width: 64, height: 7)
+                    .overlay(CutShape(tight: 2, round: 4).inkBorder(Sobremesa.ink, lineWidth: 1.2))
+                }.font(.system(size: 11.5, weight: .semibold))
+            }
         }
+        .padding(.horizontal, 11).padding(.vertical, 7)
+        .printed(CutShape(tight: 3, round: 10), offset: CGSize(width: 2, height: 3))
+    }
+
+    // MARK: Art
+
+    @ViewBuilder private var art: some View {
+        switch model.stage {
+        case 2 where model.phase == .listening:
+            SkewerPintxo(form: .standing(split: false), level: CGFloat(model.level)).frame(width: 250, height: 250)
+        case 2 where model.phase == .finishing || model.phase == .starting:
+            SkewerPintxo(form: .working).frame(width: 250, height: 250)
+        case 3:
+            TimelineView(.animation(minimumInterval: 1 / 10)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let you = Int(t / 2.6) % 5 == 0 || Int(t / 2.6) % 5 == 3
+                let wave = CGFloat(0.45 + 0.4 * abs(sin(t * 3.3)))
+                SkewerPintxo(form: .standing(split: true), level: you ? wave : 0.02, others: you ? 0.02 : wave)
+            }.frame(width: 250, height: 250)
+        case 4:
+            SkewerPintxo(form: .resting).frame(width: 130, height: 130)
+        default:
+            SkewerPintxo(form: .resting, progress: model.stage <= 2 ? downloadFraction : nil).frame(width: 250, height: 250)
+        }
+    }
+
+    // MARK: Steps
+
+    private func headline(_ text: String) -> some View {
+        Text(text).font(Sobremesa.display(42, weight: 600)).lineSpacing(-2).fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func sub(_ text: String) -> some View {
+        Text(text).font(.system(size: 15)).foregroundStyle(Sobremesa.ink.opacity(0.85)).fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func next(_ title: String = "Next", kind: PrintedButtonStyle.Kind = .primary, disabled: Bool = false) -> some View {
+        Button(title) { Task { await onPrimary() } }.buttonStyle(.printed(kind)).disabled(disabled || model.busy || model.phase.isActive)
+    }
+
+    private var back: some View {
+        Button("Back", action: onBack).buttonStyle(.printed(.quiet)).disabled(model.phase.isActive || model.busy)
     }
 
     @ViewBuilder private var content: some View {
         switch model.stage {
-        case 0:
-            Text("tapas /   SMALL TOOLS. GOOD COMPANY.").font(.system(size: 8, design: .monospaced)).tracking(0.6).foregroundStyle(Grafico.muted)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Welcome.").font(.system(size: 28, design: .serif))
-                Text("This is your place.").font(.system(size: 28, design: .serif)).italic().foregroundStyle(BarPalette.color(0x77875f))
-            }.padding(.top, 10)
-            Text("A thought to put into words.\nA conversation worth keeping.").font(.system(size: 11)).lineSpacing(4).foregroundStyle(Grafico.muted).padding(.bottom, 8)
-            menuTool("01", name: "Dictado", description: "Speak. Put your words where you work.", symbol: "◉")
-            menuTool("02", name: "Acta", description: "Keep a conversation as a transcript.", symbol: "≋")
-            ReceiptRule()
-            Text("On your Mac. In your hands.").font(.system(size: 12, design: .serif)).italic().foregroundStyle(Grafico.muted).padding(.vertical, 4)
-            Button("Let’s get you settled →") { Task { await onPrimary() } }.buttonStyle(GraficoButtonStyle()).disabled(model.busy)
-        case 1:
-            heading("A little access.")
-            Text("Each permission has a purpose. You choose when to allow it.").font(.system(size: 13)).foregroundStyle(Grafico.muted)
-            permission("Microphone", detail: "Your voice, for Dictado and Acta.", granted: model.flow.microphoneGranted) { Task { await onMicrophone() } }
-            permission("Shortcuts & paste", detail: "Accessibility: both shortcuts + Dictado paste.", granted: model.flow.accessibilityTrusted, action: onSecondary)
-            permission("Meeting audio · Acta", detail: "Screen & System Audio Recording.", granted: model.appAudioGranted) { Task { await onAppAudio() } }
-            Text("Acta saves audio transcripts, never screen images. Meeting audio can wait until your first meeting. Buttons work without Accessibility.")
-                .font(.system(size: 11)).foregroundStyle(Grafico.muted).lineSpacing(2)
-            if model.accessibilityChecked && !model.flow.accessibilityTrusted {
-                Text("Enable **tapas** in System Settings → Privacy & Security → Accessibility, then check again.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                Button("Show tapas in Finder", action: onRevealApplication).buttonStyle(.plain)
-            }
-            Button("Check permissions again", action: onRecheckAccessibility).buttonStyle(.plain).font(.system(size: 11))
-            primary("Continue →")
-        case 2:
-            heading("A home for your words.")
-            Text("One shared folder for Dictado and Acta. Change it in Preferences anytime.").font(.system(size: 13)).foregroundStyle(Grafico.muted)
-            HStack {
-                Image(systemName: "folder").font(.system(size: 26)).foregroundStyle(Grafico.cobalt)
-                Text(model.transcriptDirectory.path).font(.system(size: 11)).textSelection(.enabled)
-                Spacer()
-                Button("Choose…", action: onChooseFolder)
-            }.padding(14).background(Grafico.paper, in: RoundedRectangle(cornerRadius: 9))
-            Label("dictado · saved takes", systemImage: "folder").font(.system(size: 12))
-            Label("acta · meeting transcripts", systemImage: "folder").font(.system(size: 12))
-            Text("**tapas** creates these subfolders for you. Existing files stay where they are.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            if let error = model.folderError { NoticeBox(text: error, error: true) }
-            if model.folderConfirmed { NoticeBox(text: "Folder selected. Both tools use this location.") }
-            else { Button("Use Documents/tapas", action: onDefaultFolder).buttonStyle(GraficoButtonStyle(secondary: true)) }
-            primary("Continue →", disabled: !model.folderConfirmed)
-        default:
-            HStack(spacing: 18) {
-                PintxoWaveform(recording: model.phase == .listening, level: model.level)
-                    .scaleEffect(0.48).frame(width: 76, height: 74)
-                VStack(alignment: .leading, spacing: 8) {
-                    Eyebrow(text: "Try a little before you go")
-                    heading("Say something small.")
-                }
-            }
-            if !model.flow.modelsReady {
-                if !model.downloading {
-                    Text("tapas downloads voice models and prepares each one for this Mac. First-time setup can take several minutes. Prepared models are saved for future use.").font(.system(size: 13)).foregroundStyle(Grafico.muted)
-                }
-                if model.downloading {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(model.preparationStatus.title).font(.system(size: 13, weight: .medium))
-                        if let fraction = model.preparationStatus.fraction {
-                            ProgressView(value: fraction).tint(Grafico.olive)
-                            Text(fraction, format: .percent.precision(.fractionLength(0)))
-                                .font(.system(size: 11, design: .monospaced))
-                        } else {
-                            HStack(spacing: 10) {
-                                ProgressView().controlSize(.small)
-                                TimelineView(.periodic(from: .now, by: 1)) { context in
-                                    let seconds = max(0, Int(context.date.timeIntervalSince(model.preparationStatus.startedAt)))
-                                    Text("\(seconds / 60)m \(seconds % 60)s elapsed")
-                                        .font(.system(size: 11, design: .monospaced))
-                                }
-                            }
-                        }
-                        Text(model.preparationStatus.detail).font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                    }
-                }
-                Button(model.downloading ? "Preparing…" : "Prepare voice models") { Task { await onPrepare() } }.buttonStyle(GraficoButtonStyle()).disabled(model.downloading)
-            } else if !model.flow.microphoneGranted {
-                permission("Microphone", detail: "Allow it to try your first take.", granted: false) { Task { await onMicrophone() } }
-            } else {
-                Text("✓ Voice models ready on this Mac").font(.system(size: 11)).foregroundStyle(Grafico.olive)
-                VStack(alignment: .leading, spacing: 10) {
-                    Eyebrow(text: model.phase == .listening ? "Listening" : model.completedPractice ? "Your words, ready" : "Say something like")
-                    Text(model.practiceText.isEmpty ? "Leave a little room for the good ideas." : model.practiceText)
-                        .font(.system(size: 18, design: .serif)).italic().lineLimit(3).textSelection(.enabled)
-                    Button(model.phase == .listening ? "Finish practice take" : model.phase == .finishing ? "Finishing…" : "Try a practice take") { Task { await onPractice() } }
-                        .buttonStyle(GraficoButtonStyle(secondary: true)).disabled(model.busy || model.phase == .finishing || model.phase == .starting)
-                    if model.phase == .listening { Button("Cancel practice", action: onCancel).buttonStyle(.plain) }
-                    Text("Nothing is pasted or saved during practice.").font(.system(size: 11)).foregroundStyle(Grafico.muted)
-                }
-            }
-            ReceiptRule()
-            assistantSetup
-            primary(model.completedPractice ? "Lovely. Let’s begin →" : "Open tapas →", disabled: model.phase.isActive)
+        case 0: arrive
+        case 1: allow
+        case 2: firstTake
+        case 3: acta
+        default: houseRules
         }
     }
 
-    private var assistantSetup: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Use with your AI assistant · optional").font(.system(size: 13, weight: .medium))
-            Text("Install the **tapas** skill so your assistant can find recordings and use templates for notes and reviews. Edit templates yourself or ask your assistant to change them.")
-                .font(.system(size: 11)).foregroundStyle(Grafico.muted)
-            AssistantSetupView(model: model.assistant, onAction: onAssistantAction)
-                .disabled(model.busy || model.phase.isActive || leavingBar)
-            Button("Open templates") { onAssistantAction("templates") }
-                .buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(Grafico.olive)
-                .disabled(model.busy || model.phase.isActive || leavingBar)
+    @ViewBuilder private var arrive: some View {
+        headline("Your voice, written down and kept on this Mac.")
+        if model.flow.modelsReady {
+            Text("Ready. Everything runs on this Mac.").font(.system(size: 13, weight: .semibold))
+        } else if model.downloading {
+            Text(model.preparationStatus.title + (model.preparationStatus.fraction.map { " · \(Int($0 * 100))%" } ?? ""))
+                .font(.system(size: 13, weight: .semibold))
         }
+        sub("This happens once. Nothing you say leaves your Mac.")
+        if let error = model.flow.modelError {
+            Notice(text: error, error: true)
+            Button("Try again") { Task { await onPrepare() } }.buttonStyle(.printed(.secondary, small: true)).disabled(model.downloading)
+        }
+        HStack(spacing: 16) { next(model.flow.modelsReady ? "Next" : "Continue while it downloads") }.padding(.top, 4)
     }
 
-    private func heading(_ title: String) -> some View { Text(title).font(.system(size: 29, weight: .bold)).tracking(-0.8) }
-    private func primary(_ title: String, disabled: Bool = false) -> some View {
-        Button { Task { await onPrimary() } } label: { HStack { Text(title); Spacer() } }
-            .buttonStyle(GraficoButtonStyle()).disabled(disabled || model.busy)
-    }
-    private func permission(_ title: String, detail: String, granted: Bool, action: @escaping () -> Void) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 5) { Text(title).font(.system(size: 13)); Text(detail).font(.system(size: 10)).foregroundStyle(Grafico.muted) }
+    private func permission(_ title: String, _ detail: String, granted: Bool, allow: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title).font(Sobremesa.display(19, weight: 600))
+                Text(detail).font(.system(size: 13)).foregroundStyle(Sobremesa.ink.opacity(0.8)).fixedSize(horizontal: false, vertical: true)
+            }
             Spacer()
-            if granted { Image(systemName: "checkmark.circle.fill").foregroundStyle(Grafico.olive).accessibilityLabel("Allowed") }
-            else { Button("Allow →", action: action).buttonStyle(.plain).foregroundStyle(Grafico.cobalt).disabled(model.busy) }
-        }.padding(.vertical, 5)
+            if granted { DoneMark(text: "Allowed") }
+            else { Button(allow, action: action).buttonStyle(.printed(primary ? .primary : .secondary, small: true)).disabled(model.busy) }
+        }.padding(.vertical, 12)
     }
-    private func menuTool(_ number: String, name: String, description: String, symbol: String) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            ReceiptRule()
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(number).font(.system(size: 8, design: .monospaced)).foregroundStyle(Grafico.muted)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(name).font(.system(size: 25, weight: .medium)).tracking(-0.9)
-                    Text(description).font(.system(size: 10)).foregroundStyle(Grafico.muted)
-                }
-                Spacer(minLength: 0)
-                Text(symbol).font(.system(size: 21)).foregroundStyle(Grafico.olive)
-            }.padding(.bottom, 8)
+
+    @ViewBuilder private var allow: some View {
+        headline("Two permissions, each for one thing.")
+        VStack(spacing: 0) {
+            permission("Microphone", "So tapas can hear you.", granted: model.flow.microphoneGranted, allow: "Allow", primary: true) {
+                Task { await onMicrophone() }
+            }
+            Rectangle().fill(Sobremesa.ink.opacity(0.14)).frame(height: 1)
+            permission("Accessibility", "So your shortcut works in every app and your words can be pasted.",
+                       granted: model.flow.accessibilityTrusted, allow: "Open System Settings", primary: false, action: onSecondary)
+            Rectangle().fill(Sobremesa.ink.opacity(0.14)).frame(height: 1)
+            permission("Meeting audio", "We’ll ask the first time you keep a call.",
+                       granted: model.appAudioGranted, allow: "Allow now", primary: false) { Task { await onAppAudio() } }
         }
+        .padding(.horizontal, 20).padding(.vertical, 4)
+        .printed(CutShape(tight: 5, round: 22))
+        if model.accessibilityChecked && !model.flow.accessibilityTrusted {
+            HStack(spacing: 14) {
+                Text("Turn on tapas in Privacy & Security → Accessibility.").font(.system(size: 12.5))
+                Button("Show tapas in Finder", action: onRevealApplication).buttonStyle(.printed(.quiet, small: true))
+                Button("Check again", action: onRecheckAccessibility).buttonStyle(.printed(.quiet, small: true))
+            }
+        }
+        if let error = model.flow.modelError, model.stage == 1 { Notice(text: error, error: true) }
+        HStack(spacing: 16) { back; next() }.padding(.top, 4)
+    }
+
+    @ViewBuilder private var firstTake: some View {
+        if !model.flow.modelsReady {
+            headline("Almost ready.")
+            Text(model.downloading ? model.preparationStatus.title : "The speech model is on its way.").font(.system(size: 13, weight: .semibold))
+            sub("You can try your first take as soon as the speech model is ready.")
+            HStack(spacing: 16) { back; next("Skip for now") }.padding(.top, 4)
+        } else if !model.flow.microphoneGranted {
+            headline("First, the microphone.")
+            sub("tapas needs to hear you for your first take.")
+            HStack(spacing: 16) {
+                back
+                Button("Allow microphone") { Task { await onMicrophone() } }.buttonStyle(.printed(.primary)).disabled(model.busy)
+            }.padding(.top, 4)
+        } else if model.completedPractice && !model.phase.isActive {
+            Text(model.practiceText).font(Sobremesa.display(26)).lineLimit(4).textSelection(.enabled)
+                .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                .printed(CutShape(tight: 5, round: 22))
+            Text("That’s Dictado. It types wherever your cursor is.").font(Sobremesa.display(30, weight: 600)).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 16) {
+                Button("Try again") { Task { await onPractice() } }.buttonStyle(.printed(.secondary)).disabled(model.busy)
+                next()
+            }.padding(.top, 4)
+        } else {
+            HStack(alignment: .center, spacing: 10) {
+                Text("Press").font(Sobremesa.display(42, weight: 600))
+                ShortcutMenu(label: model.flow.hotkeyLabel, recording: plate.recordingShortcut, accessibilityName: "Dictado",
+                             presets: [("Control–Option", { actions.setHotkey(.standard) }), ("Right Command", { actions.setHotkey(.rightCommand) })],
+                             record: actions.recordHotkey, large: true)
+                    .disabled(model.phase.isActive)
+            }
+            headline("and say anything.")
+            if let error = plate.shortcutError { Notice(text: error, error: true) }
+            Text(model.practiceText.isEmpty ? (model.phase == .listening ? "Listening…" : "Your words will appear here.") : model.practiceText)
+                .font(Sobremesa.display(model.practiceText.isEmpty ? 18 : 24))
+                .foregroundStyle(model.practiceText.isEmpty ? Sobremesa.muted : Sobremesa.ink)
+                .lineLimit(4)
+                .padding(18).frame(maxWidth: .infinity, minHeight: 74, alignment: .leading)
+                .printed(CutShape(tight: 5, round: 22))
+            HStack(spacing: 16) {
+                back
+                Button(model.phase == .listening ? "Done" : model.phase == .finishing ? "Finishing…" : "Start") { Task { await onPractice() } }
+                    .buttonStyle(.printed(.primary)).disabled(model.busy || model.phase == .finishing || model.phase == .starting)
+                if model.phase == .listening { Button("Cancel", action: onCancel).buttonStyle(.printed(.quiet)) }
+                else { next("Skip", kind: .quiet) }
+            }.padding(.top, 4)
+            Text("Press the keys again, or Done, when you’re finished. Click the keys to use your own shortcut. Nothing is pasted or saved.")
+                .font(.system(size: 12.5)).foregroundStyle(Sobremesa.ink.opacity(0.75)).fixedSize(horizontal: false, vertical: true)
+        }
+        if let error = model.flow.modelError, model.stage == 2 { Notice(text: error, error: true) }
+    }
+
+    @ViewBuilder private var acta: some View {
+        headline("For calls, there’s Acta.")
+        sub("You stand up on the left, everyone else on the right. Nothing records until you say so.")
+        VStack(spacing: 0) {
+            RuleRow(toggle: Binding(get: { plate.settings.meetingPromptsEnabled },
+                                    set: { plate.settings.meetingPromptsEnabled = $0; actions.preferencesChanged() }),
+                    toggleColor: Sobremesa.cobalt, toggleLabel: "Offer to keep calls") {
+                Text("When another app starts using my microphone, offer to keep the call.")
+            }
+            RuleRow(toggle: nil) {
+                HStack(spacing: 6) {
+                    Text("Open Acta with")
+                    ShortcutMenu(label: plate.settings.actaHotkey.label, recording: plate.recordingActaShortcut, accessibilityName: "Acta",
+                                 presets: [("Control–Shift–M", actions.resetActaHotkey)], record: actions.recordActaHotkey)
+                    Text(".")
+                }
+            }
+        }
+        .padding(.horizontal, 18).padding(.vertical, 2)
+        .printed(CutShape(tight: 5, round: 22))
+        if let error = plate.shortcutError { Notice(text: error, error: true) }
+        HStack(spacing: 16) { back; next() }.padding(.top, 4)
+    }
+
+    @ViewBuilder private var houseRules: some View {
+        Text("These are your house rules.").font(Sobremesa.display(36, weight: 600))
+        sub("Change them any time from the tapas pintxo in the menu bar.")
+        ScrollView {
+            HouseRulesView(model: plate, actions: actions, sections: [.dictado, .files, .assistant])
+                .padding(.horizontal, 18).padding(.bottom, 12)
+        }
+        .scrollIndicators(.never)
+        .frame(maxHeight: 330)
+        .printed(CutShape(tight: 5, round: 22))
+        HStack(spacing: 16) { back; next("Start using tapas") }.padding(.top, 4)
     }
 }
 
-
-private struct DoorArch: Shape {
-    func path(in rect: CGRect) -> Path {
-        let radius = min(rect.width / 2, 95.0)
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + radius))
-        path.addQuadCurve(to: CGPoint(x: rect.minX + radius, y: rect.minY), control: rect.origin)
-        path.addLine(to: CGPoint(x: rect.maxX - radius, y: rect.minY))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX, y: rect.minY + radius), control: CGPoint(x: rect.maxX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        path.closeSubpath()
-        return path
+extension PlateActions {
+    /// Actions that do nothing, for previews and design renders.
+    static var inert: PlateActions {
+        PlateActions(talk: {}, setup: {}, setHotkey: { _ in }, recordHotkey: {}, preferencesChanged: {}, folder: {}, copy: { _ in },
+                     export: { _ in }, dismiss: {}, retryPaste: {}, retrySave: {}, cancel: {}, quit: {})
     }
 }

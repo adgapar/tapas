@@ -4,7 +4,7 @@ import TapasCore
 
 @MainActor
 final class SetupWindowController: NSWindowController, NSWindowDelegate {
-    static let size = NSSize(width: 760, height: 700)
+    static let size = NSSize(width: 880, height: 660)
     var onEntered: (() -> Void)?
     var onFinished: (() -> Void)?
     var onDismissed: (() -> Void)?
@@ -32,8 +32,13 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     private var completionReported = false
     var onAssistantAction: ((String) -> Void)?
 
-    init(flow: SetupFlow, assistant: AssistantSetupModel = AssistantSetupModel()) {
+    let plate: PlateModel
+    let actions: PlateActions
+
+    init(flow: SetupFlow, assistant: AssistantSetupModel = AssistantSetupModel(), plate: PlateModel = PlateModel(), actions: PlateActions = .inert) {
         model = SetupModel(flow: flow, assistant: assistant)
+        self.plate = plate
+        self.actions = actions
         let window = FloatingWindow(contentRect: NSRect(origin: .zero, size: Self.size),
                                     styleMask: [.borderless, .closable, .miniaturizable], backing: .buffered, defer: false)
         configureFloatingWindow(window)
@@ -44,6 +49,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         let setupModel = model
         window.contentViewController = NSHostingController(rootView: FittedSurface(width: Self.size.width, height: Self.size.height) { [weak self] in SetupView(
             model: setupModel,
+            plate: plate,
+            actions: actions,
             onPrimary: { [weak self] in await self?.primary() },
             onSecondary: { [weak self] in self?.openAccessibility?() },
             onSkip: { [weak self] in self?.window?.close() },
@@ -59,7 +66,8 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
             onDefaultFolder: { [weak self] in self?.defaultFolder?() },
             onPrepare: { [weak self] in await self?.prepare() },
             onEntered: { [weak self] in self?.onEntered?() },
-            onAssistantAction: { [weak self] in self?.assistantAction($0) }
+            onAssistantAction: { [weak self] in self?.assistantAction($0) },
+            onStep: { [weak self] in self?.goTo($0) }
         ) })
         window.appearance = NSAppearance(named: .aqua)
         window.center()
@@ -115,10 +123,13 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
+    /// Arrive, Allow, First take, Acta, House rules.
+    static let lastStage = 4
+
     func setStage(_ stage: Int) {
-        model.stage = min(3, max(0, stage))
-        if model.stage > 0 { model.entered = true }
-        model.flow.phase = [SetupPhase.peek, .microphone, .kitchen, .tryIt][model.stage]
+        model.stage = min(Self.lastStage, max(0, stage))
+        model.entered = true
+        model.flow.phase = [SetupPhase.peek, .microphone, .tryIt, .kitchen, .kitchen][model.stage]
         model.flow.modelError = nil
         onStageChanged?(model.stage)
     }
@@ -128,10 +139,17 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
         setStage(model.stage - 1)
     }
 
+    /// Steps already reached can be revisited from the step names.
+    func goTo(_ stage: Int) {
+        guard !model.phase.isActive, !model.busy, stage <= model.stage else { return }
+        setStage(stage)
+    }
+
     func primary() async {
         guard !model.busy, !model.phase.isActive else { return }
-        if model.stage == 2 && !model.folderConfirmed { return }
-        if model.stage == 3 {
+        if model.stage == Self.lastStage {
+            // The folder sentence on this step shows where recordings go; starting confirms it.
+            if !model.folderConfirmed { defaultFolder?(); model.folderConfirmed = true }
             model.flow.phase = .finished
             reportCompletionIfNeeded()
             window?.close()
@@ -142,8 +160,9 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func assistantAction(_ action: String) {
-        guard model.stage == 3, !model.busy, !model.phase.isActive,
-              action == "install" || action == "refresh" || action == "templates" else { return }
+        let verb = action.split(separator: ":").first.map(String.init) ?? action
+        guard model.stage == Self.lastStage, !model.busy, !model.phase.isActive,
+              ["install", "remove", "refresh", "templates", "rebuild"].contains(verb) else { return }
         onAssistantAction?(action)
     }
 
@@ -171,7 +190,7 @@ final class SetupWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func handleTalk() async {
-        guard model.stage == 3, model.flow.modelsReady, model.flow.microphoneGranted, !model.busy else { return }
+        guard model.stage == 2, model.flow.modelsReady, model.flow.microphoneGranted, !model.busy else { return }
         model.busy = true
         defer { model.busy = false }
         if model.phase != .listening { model.practiceText = ""; model.completedPractice = false }

@@ -1,11 +1,11 @@
 # Use Tapas with your AI assistant
 
-On the final onboarding step, or in **Preferences → Use with your AI assistant**,
-choose Claude Code, Codex, or Cursor, and select **Install skill**.
+On the final onboarding step, or in **House rules → Your assistant**, choose
+**Install** next to Claude Code, Codex, or Cursor. Nothing is installed until you do.
 Start a new assistant session, then ask
 something like: “Find what we decided about onboarding last week in my Tapas recordings.”
 Assistant setup is optional and does not require a practice take. Installation
-happens on the same page. Preferences also lets you update or remove an intact Tapas skill,
+happens on the same page. House rules also let you update or remove an intact Tapas skill,
 and copy a setup command for the locally installed app. The command does not
 fetch a script or require another package manager.
 
@@ -18,7 +18,7 @@ remove recordings.
 
 Installing or updating the skill from Tapas (including the setup command) adds
 starter Markdown files to `templates/` and `playbooks/` in your current transcript
-folder. **Preferences → Use with your AI assistant → Open templates** also adds
+folder. **House rules → Your assistant → Open templates** also adds
 missing starters and opens the templates folder in Finder. Existing files are
 never overwritten, including customized starters. Deleted starters are restored
 when you next install/update the skill or use Open templates.
@@ -35,7 +35,7 @@ skill guides your assistant to choose a matching playbook and template, includin
 custom files, without requiring you to name one. You can also ask “Show my Tapas
 templates” for links, or “Add a Risks section to my meeting-notes template” to
 change future notes. Onboarding explains this when offering assistant setup, with
-an Open templates shortcut. The same folder shortcut is available in Preferences.
+an Open templates shortcut. The same folder shortcut is available in House rules.
 
 Starters include meeting notes, customer interviews, and project updates, with
 playbooks for meeting notes, weekly reviews, polishing saved dictation, and
@@ -101,8 +101,8 @@ Missing dates are grouped under `unknown-date`. New timestamps use UTC (`Z`);
 older offset-qualified timestamps retain their original month grouping.
 
 Tapas rebuilds indexes after saves, when Home opens, and about once a minute
-while running. **Rebuild recording indexes** provides a manual refresh. A failure
-leaves the saved transcript intact and appears in Preferences. Search source files
+while running. **Rebuild recording index** provides a manual refresh. A failure
+leaves the saved transcript intact and appears in House rules. Search source files
 if indexes are missing or stale; a preview does not cover an entire meeting.
 
 Tapas only replaces generated pages whose ownership checksums still match. It

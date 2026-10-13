@@ -141,23 +141,24 @@ struct DictadoRecovery: View {
     var actions: PlateActions
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 10) {
-                PintxoMark().frame(width: 24, height: 36)
-                Eyebrow(text: model.snapshot.phase == .recovery ? "Dictado / Your words are kept" : "Dictado / Another little take?")
+            HStack(spacing: 12) {
+                SkewerPintxo(form: .resting).frame(width: 38, height: 38)
+                Text(model.snapshot.phase == .recovery ? "Your words are kept." : "Another take?")
+                    .font(Sobremesa.display(22, weight: 600))
             }
-            if let notice = model.notice { Text(notice).font(.system(size: 11)).foregroundStyle(Grafico.olive) }
+            if let notice = model.notice { Text(notice).font(.system(size: 12)).foregroundStyle(Sobremesa.muted) }
             ScrollView { ResultView(snapshot: model.snapshot, actions: actions) }
             if model.snapshot.committedText.isEmpty {
-                HStack {
-                    Button("Try another take", action: actions.talk).buttonStyle(GraficoButtonStyle())
-                    Button("Open setup", action: actions.setup).buttonStyle(.plain).font(.system(size: 12))
+                HStack(spacing: 14) {
+                    Button("Try another take", action: actions.talk).buttonStyle(.printed(.primary, small: true))
+                    Button("Open setup", action: actions.setup).buttonStyle(.printed(.quiet, small: true))
                 }
             }
         }
-        .padding(18).frame(width: 384, height: model.snapshot.phase == .recovery ? 370 : 250)
-        .foregroundStyle(Grafico.ink)
-        .background(Grafico.card, in: RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Grafico.ink, lineWidth: 1))
+        .padding(18).frame(width: 376, height: (model.snapshot.phase == .recovery ? 370 : 250) - 8, alignment: .topLeading)
+        .foregroundStyle(Sobremesa.ink)
+        .printed(CutShape(tight: 5, round: 20), offset: CGSize(width: 4, height: 5))
+        .frame(width: 384, height: model.snapshot.phase == .recovery ? 370 : 250, alignment: .topLeading)
         .preferredColorScheme(.light)
     }
 }

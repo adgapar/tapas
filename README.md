@@ -39,7 +39,7 @@ without leaving the app in front of you.
 2. Speak. A small recording signal stays visible; live words are optional.
 3. Press again. Your words return to the app you were using.
 
-Change the shortcut in Preferences. Turn on history to keep a redacted Markdown
+Change the shortcut in House rules. Turn on history to keep a redacted Markdown
 copy of each take. If automatic paste is unavailable, copy your words from Tapas.
 
 ### Acta · Stay in the conversation
@@ -71,9 +71,9 @@ use them with your favorite AI tools and scripts. You choose what gets access.
 
 **Your files are the interface.** Tapas handles capture; you choose what to do
 with the result. Saved recordings include factual metadata and searchable Markdown
-indexes. In **Preferences → Use with your AI assistant**, install a local skill
+indexes. In **House rules → Your assistant**, choose **Install** to add a local skill
 for finding recordings, citing sources, and using editable Markdown templates for
-meeting notes and reviews. Open the templates folder from Preferences, or ask your
+meeting notes and reviews. Open the templates folder from House rules, or ask your
 assistant to customize a template. [Assistant setup](docs/ASSISTANTS.md).
 
 No Tapas account is required. Your files remain yours to read and use outside
@@ -82,10 +82,10 @@ the app.
 ## Make yourself at home
 
 1. **Download** the DMG and drag Tapas into Applications.
-2. **Open Tapas** for a four-step welcome: meet the tools, allow access, choose a
-   transcript folder, and try a private practice take. You can finish later.
-3. **Open Tapas from the Dock or Applications** for Dictado, Acta, Recent and Preferences.
-   The pintxo in your menu bar is a shortcut to the same tools.
+2. **Open Tapas** for a five-step welcome: the speech model downloads while you allow
+   access, try a private practice take, meet Acta, and review your house rules. You can finish later.
+3. **Click the pintxo in your menu bar** for what you kept, Dictado, Acta and house rules.
+   Opening Tapas from the Dock or Applications shows the same card.
 
 Tapas is signed and notarized for macOS. Future releases arrive through automatic
 updates; you can also choose **Check for Updates…** in the app.

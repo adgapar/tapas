@@ -50,7 +50,7 @@ import Testing
     #expect(nearLeft.y < 505) // Leaves room for the counter edge in the seated composition.
 }
 
-@MainActor @Test func toolsReceiptCanExpandForWorkAndReturnToCompactHome() throws {
+@MainActor @Test func homeCardKeepsItsSizeWhenTurnedOverAndGrowsOnlyForActa() throws {
     _ = NSApplication.shared
     let model = PlateModel()
     let actions = PlateActions(talk: {}, setup: {}, setHotkey: { _ in }, recordHotkey: {}, preferencesChanged: {}, folder: {}, copy: { _ in }, export: { _ in }, dismiss: {}, retryPaste: {}, retrySave: {}, cancel: {}, quit: {})
@@ -66,7 +66,7 @@ import Testing
     model.selectedTool = nil
     model.tab = "Preferences"
     controller.resizeForCurrentPage()
-    #expect(window.frame.height > compact.height)
+    #expect(window.frame.size == compact) // House rules are the back of the same card.
     model.tab = "Tools"
     controller.resizeForCurrentPage()
     #expect(window.frame.size == compact)

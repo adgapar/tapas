@@ -48,93 +48,91 @@ enum DesignRendering {
         window.close()
     }
 
-    static func renderServingMotion(to directory: URL) throws {
-        let model = SetupModel(flow: SetupFlow(phase: .peek))
-        model.entered = true; model.isPresented = true
-        let size = SetupWindowController.size
-        let window = NSWindow(contentRect: NSRect(origin: CGPoint(x: -10000, y: -10000), size: size), styleMask: [.borderless], backing: .buffered, defer: false)
-        window.isReleasedWhenClosed = false
-        defer { window.close() }
-        let view = SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in })
-        let host = NSHostingView(rootView: view)
-        host.frame = NSRect(origin: .zero, size: size)
-        window.contentView = host
-        window.appearance = NSAppearance(named: .aqua)
-        window.orderFront(nil)
-        RunLoop.current.run(until: Date().addingTimeInterval(1.2))
-        model.stage = 1
-        let start = Date()
-        for milliseconds in [100, 240, 450, 700, 1100] {
-            RunLoop.current.run(until: start.addingTimeInterval(Double(milliseconds) / 1000))
-            host.layoutSubtreeIfNeeded()
-            guard let bitmap = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { throw CocoaError(.fileWriteUnknown) }
-            host.cacheDisplay(in: host.bounds, to: bitmap)
-            guard let data = bitmap.representation(using: .png, properties: [:]) else { throw CocoaError(.fileWriteUnknown) }
-            try data.write(to: directory.appendingPathComponent("setup-serving-\(milliseconds).png"))
-        }
+    /// Sample recordings in the real file format, so renders exercise first words, metadata and shapes.
+    static func sampleLibrary() throws -> [HistoryEntry] {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("tapas-render-library", isDirectory: true)
+        try? FileManager.default.removeItem(at: root)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        let meeting = """
+        ---
+        schema_version: 1
+        tool: acta
+        duration_seconds: 3240
+        languages: ["en", "es"]
+        ---
+
+        # Acta · Computer audio
+
+        [00:00:10] **Microphone**: Hello team, sorry for being late. I think we have everyone?
+        [00:00:18] **Computer audio**: No worries, we just started. Lea was walking us through the onboarding scope.
+        [00:04:02] **Computer audio**: The proposal is three steps, and the folder choice moves into house rules.
+        [00:11:40] **Microphone**: That works for me. Let’s keep the practice take, it is the moment people remember.
+        [00:24:05] **Computer audio**: Agreed. Iñaki will share the new menu bar icon this week.
+        [00:38:10] **Microphone**: Then I’ll draft the copy by Tuesday and we test it on Thursday.
+        [00:51:30] **Computer audio**: Perfect. Gracias, everyone.
+        """
+        let take = """
+        ---
+        schema_version: 1
+        tool: dictado
+        duration_seconds: 52
+        language: es
+        ---
+
+        Hola Ane, te paso el borrador con los cambios de la cláusula de fianza. Si te parece bien, lo firmamos el lunes.
+        """
+        let short = """
+        ---
+        schema_version: 1
+        tool: dictado
+        duration_seconds: 18
+        language: en
+        ---
+
+        Move the save confirmation under the form so it stays visible after submit.
+        """
+        try meeting.write(to: root.appendingPathComponent("a.md"), atomically: true, encoding: .utf8)
+        try take.write(to: root.appendingPathComponent("b.md"), atomically: true, encoding: .utf8)
+        try short.write(to: root.appendingPathComponent("c.md"), atomically: true, encoding: .utf8)
+        return try HistoryLibrary.read(directory: root)
     }
 
     static func renderViews(to directory: URL) throws {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        for state in ["ready", "installed", "conflict", "unprepared", "downloading", "preparing", "receipt-installed"] {
-            let needsModels = ["unprepared", "downloading", "preparing"].contains(state)
-            let setup = SetupModel(flow: SetupFlow(phase: .tryIt, microphoneGranted: state != "unprepared", modelsReady: !needsModels))
-            if state == "downloading" || state == "preparing" {
-                setup.downloading = true
-                setup.preparationStatus = ModelPreparationStatus(
-                    model: "filler detection", phase: state == "downloading" ? .downloading : .preparing,
-                    fraction: state == "downloading" ? 0.42 : nil,
-                    startedAt: Date().addingTimeInterval(-180))
-            }
-            if state == "installed" || state == "receipt-installed" {
-                setup.assistant.status = "Installed"
-                setup.assistant.message = "Skill installed. Start a new assistant session to load it."
-            } else if state == "conflict" {
-                setup.assistant.status = "Needs attention"
-                setup.assistant.message = "An existing skill has been modified. Your files were preserved. Review the existing installation before trying again."
-            }
-            if state == "receipt-installed" {
-                setup.completedPractice = true
-                setup.practiceText = "A little more room for the good ideas."
-            }
-            let view = SetupView(model: setup, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }, animateServing: false)
-            try saveHosted(view, size: SetupWindowController.size, to: directory.appendingPathComponent("setup-assistant-\(state).png"))
-            try save(view, to: directory.appendingPathComponent("setup-assistant-\(state)-perspective.png"), scale: 1)
-        }
-        for (i, phase) in [SetupPhase.peek, .microphone, .accessibility, .kitchen, .tryIt, .finished].enumerated() {
-            let model = SetupModel(flow: SetupFlow(phase: phase, microphoneGranted: i > 1, modelsReady: i > 3, downloadFraction: 0.64))
-            model.practiceText = i == 4 ? "A little more room for the good ideas." : ""
-            model.completedPractice = i == 4
-            try saveHosted(SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }), size: SetupWindowController.size, to: directory.appendingPathComponent("setup-\(i).png"))
-            if model.completedPractice {
-                let surface = FittedSurface(width: SetupWindowController.size.width, height: SetupWindowController.size.height) {
-                    SetupView(model: model, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in })
-                }
-                try saveHosted(surface, size: NSSize(width: 704, height: 624), to: directory.appendingPathComponent("setup-assistant-small.png"))
-            }
-        }
-        let welcome = SetupModel(flow: SetupFlow(phase: .peek))
-        welcome.entered = true
-        try saveHosted(SetupView(model: welcome, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }), size: SetupWindowController.size, to: directory.appendingPathComponent("setup-menu.png"))
-        try save(SetupView(model: welcome, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }, animateServing: false), to: directory.appendingPathComponent("setup-menu-perspective.png"), scale: 1)
-        for stage in 0...3 {
-            let small = SetupModel(flow: SetupFlow(phase: .peek, microphoneGranted: true, modelsReady: true))
-            small.stage = stage; small.entered = true; small.accessibilityChecked = true
-            small.folderConfirmed = true
-            try save(SetupView(model: small, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in }, animateServing: false), to: directory.appendingPathComponent("setup-perspective-\(stage).png"), scale: 1)
-            let surface = FittedSurface(width: SetupWindowController.size.width, height: SetupWindowController.size.height) {
-                SetupView(model: small, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {}, onCancel: {}, onHotkey: { _ in })
-            }
-            try saveHosted(surface, size: NSSize(width: 704, height: 624), to: directory.appendingPathComponent("setup-small-\(stage).png"))
-        }
-        try renderServingMotion(to: directory)
-        let actions = PlateActions(talk: {}, setup: {}, setHotkey: { _ in }, recordHotkey: {}, preferencesChanged: {}, folder: {}, copy: { _ in }, export: { _ in }, dismiss: {}, retryPaste: {}, retrySave: {}, cancel: {}, quit: {})
+        let actions = PlateActions.inert
         let model = PlateModel()
         model.ready = true; model.microphoneGranted = true; model.accessibilityTrusted = true; model.shortcutRunning = true
-        for tab in ["Tools", "Recent", "Preferences"] {
+        model.assistant.statuses = [.claude: "Installed", .codex: "Not installed", .cursor: "Not installed"]
+        model.assistant.present = [.claude, .codex]
+        // Onboarding: Arrive, Allow, First take, Acta, House rules.
+        for stage in 0...4 {
+            let setup = SetupModel(flow: SetupFlow(phase: .peek, microphoneGranted: stage != 1, accessibilityTrusted: stage > 1,
+                                                   modelsReady: stage > 1, downloadFraction: 0.42))
+            setup.stage = stage
+            setup.downloading = stage < 2
+            setup.preparationStatus = ModelPreparationStatus(model: "speech model", phase: .downloading, fraction: 0.42)
+            try saveHosted(SetupView(model: setup, plate: model, actions: actions, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {},
+                                     onCancel: {}, onHotkey: { _ in }, autoPrepare: false),
+                           size: SetupWindowController.size, to: directory.appendingPathComponent("setup-\(stage).png"))
+        }
+        let practiced = SetupModel(flow: SetupFlow(phase: .tryIt, microphoneGranted: true, accessibilityTrusted: true, modelsReady: true))
+        practiced.completedPractice = true
+        practiced.practiceText = "Leave a little room for the good ideas, and send the draft to Ane on Monday."
+        try saveHosted(SetupView(model: practiced, plate: model, actions: actions, onPrimary: {}, onSecondary: {}, onSkip: {}, onPractice: {},
+                                 onCancel: {}, onHotkey: { _ in }, autoPrepare: false),
+                       size: SetupWindowController.size, to: directory.appendingPathComponent("setup-2-practiced.png"))
+        // The home card: what you kept, a recording, and house rules.
+        model.entries = (try? sampleLibrary()) ?? []
+        for tab in ["Recent", "Preferences"] {
             model.tab = tab
             try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-\(tab.lowercased()).png"))
         }
+        model.tab = "Recent"
+        model.selected = model.entries.first
+        try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-detail.png"))
+        model.selected = nil
+        model.entries = []
+        try saveHosted(PlateView(model: model, actions: actions), size: model.preferredWindowSize, to: directory.appendingPathComponent("plate-empty.png"))
 
         try saveHosted(MeetingPromptView(appName: "Google Chrome", start: {}, dismiss: {}), size: NSSize(width: 400, height: 300), to: directory.appendingPathComponent("acta-suggestion.png"))
         let acta = ActaController()

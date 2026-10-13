@@ -130,7 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if !defaults.bool(forKey: "setupComplete"), !defaults.bool(forKey: "setupWelcomeSeen"), !defaults.bool(forKey: "setupPresented") {
             presentSetup()
         } else { menu?.showHome() }
-        tapasLog("launched Gráfico trusted=\(AXIsProcessTrusted())")
+        tapasLog("launched Sobremesa trusted=\(AXIsProcessTrusted())")
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -166,7 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             item.target = self
         }
         add("Show tapas", #selector(showPlate), "0")
-        add("Preferences…", #selector(showPreferences), ",")
+        add("House Rules…", #selector(showPreferences), ",")
         add("Setup…", #selector(openSetup))
         add("Check for Updates…", #selector(checkForUpdates))
         appMenu.addItem(.separator())
@@ -228,7 +228,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             checkForUpdates: { [weak self] in self?.menu?.close(); self?.updater.check() },
             setUpdateChecks: { [weak self] in self?.updater.setAutomaticChecks($0) },
             setUpdateDownloads: { [weak self] in self?.updater.setAutomaticDownloads($0) },
-            assistantAction: { [weak self] in self?.assistantAction($0) }
+            assistantAction: { [weak self] in self?.assistantAction($0) },
+            openAccessibility: { [weak self] in
+                promptAccessibilityTrust()
+                self?.hotkey.noteTrustMayHaveChanged()
+            }
         )
     }
 
@@ -251,7 +255,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
         if let previous = setup?.model.flow, previous.phase != .finished { flow = previous }
         if !UserDefaults.standard.bool(forKey: "setupComplete"), !UserDefaults.standard.bool(forKey: "setupWelcomeSeen") { flow.phase = .peek }
         flow.hotkeyLabel = model.settings.hotkey.label
-        let controller = SetupWindowController(flow: flow, assistant: model.assistant)
+        let controller = SetupWindowController(flow: flow, assistant: model.assistant, plate: model, actions: makeActions())
         controller.setStage(UserDefaults.standard.bool(forKey: "setupComplete") ? 0 : UserDefaults.standard.integer(forKey: "onboardingStage"))
         controller.model.entered = controller.model.stage > 0 || UserDefaults.standard.bool(forKey: "setupBarEntered") || UserDefaults.standard.bool(forKey: "setupWelcomeSeen") || UserDefaults.standard.bool(forKey: "setupComplete")
         if replayEntrance { controller.setStage(0); controller.model.entered = false }
@@ -537,7 +541,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
                 queueIndex(root: URL(fileURLWithPath: path, isDirectory: true))
             }
         } catch { model.assistant.message = "Library discovery couldn’t be updated: " + error.localizedDescription }
-        model.assistant.status = AssistantSkill().status(for: model.assistant.host)
+        model.assistant.refresh()
     }
 
     private func queueIndex(root: URL) {
@@ -561,7 +565,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
     private func assistantAction(_ action: String) {
         do {
             let skill = AssistantSkill()
-            switch action {
+            // "install:claude" applies to that assistant; a bare verb uses the current one.
+            switch model.assistant.parse(action) {
             case "install":
                 try LibraryLocation.update(root: model.settings.transcriptDirectory)
                 try AssistantWorkflows.prepare(root: model.settings.transcriptDirectory)
@@ -584,7 +589,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuItemValidation {
             default: break
             }
         } catch { model.assistant.message = error.localizedDescription }
-        model.assistant.status = AssistantSkill().status(for: model.assistant.host)
+        model.assistant.refresh()
     }
 
     private func revealHistory() {

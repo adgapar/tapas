@@ -1,7 +1,7 @@
 # Acta native implementation
 
 Acta shares Tapas’s floating home with Dictado. Open it from Tools or with
-Control–Shift–M (configurable in Preferences). The shortcut opens controls; it
+Control–Shift–M (configurable in House rules). The shortcut opens controls; it
 does not begin recording.
 
 ## Meeting suggestions
@@ -27,8 +27,8 @@ invitation starts microphone + computer audio capture when models and permission
 are ready, without taking focus from the call. Otherwise Acta opens its setup
 controls. Allowing a permission never starts recording; Start Acta remains an
 explicit action. The detected app is context for the prompt, not a capture filter.
-No recording begins from detection alone. Preferences can disable suggestions and stop polling. Read errors surface
-in Preferences and do not count as a meeting ending. There are no calendar,
+No recording begins from detection alone. House rules can disable suggestions and stop polling. Read errors surface
+in House rules and do not count as a meeting ending. There are no calendar,
 meeting-service or MCP dependencies.
 
 ## Recording and ownership
@@ -41,7 +41,7 @@ meeting-service or MCP dependencies.
   Native PCM formats are converted to 16 kHz mono per source. Five-second chunks
   keep audio memory bounded; recognition uses the existing local Voz/Ear pipeline.
 - The shared home shows elapsed recorded time, input meters, transcript preview
-  and Pause/Resume/Finish. All tools returns home without stopping capture. Leaving
+  and Pause/Resume/Finish. “What you kept” returns home without stopping capture. Leaving
   Acta closes the main window after capture starts and reveals the floating Pintxo.
   Pause/resume, elapsed time and finish controls stay visible below it. The timer
   opens details explicitly. Eight slim bars use recent measured loudness levels;
@@ -66,7 +66,7 @@ and the SDK’s audio/microphone stream outputs on macOS 15+.
 After saving, Acta shows a compact completion receipt with styled New meeting,
 View transcript and Export Markdown actions. Opening Acta again returns to the
 start screen; saved text is available through the explicit transcript action or
-Recent. Live transcript previews scroll in a bounded area below the controls.
+What you kept. Live transcript previews scroll in a bounded area below the controls.
 New computer audio segments use `systemAudio`; legacy `app` recovery segments
 remain readable with their original labels.
 
@@ -74,7 +74,7 @@ remain readable with their original labels.
 
 The full, unredacted transcript is written to the shared folder’s `acta/`
 subdirectory, regardless of Dictado’s history preference. The default is
-`~/Documents/tapas/`. Onboarding and Preferences use the same native folder picker.
+`~/Documents/tapas/`. Onboarding and House rules use the same native folder picker.
 New recordings use a changed location; active takes and recovery retain their
 original destination, and existing files are not moved. Markdown includes date, recorded duration,
 languages, timestamped microphone/app-source segments and interruption notes.
@@ -89,7 +89,7 @@ removed. Completed chunk IDs make restart replay idempotent. Empty meetings save
 an explicit no-speech note.
 
 Failed inference/save leaves recovery available. Finish retries pending audio and
-writes a stable unique output path, so retry does not add duplicate Recent files.
+writes a stable unique output path, so retry does not add duplicate entries in What you kept.
 An interrupted session is loaded paused after model preparation. Export preserves
 available recognized text, and explicit Discard removes its recovery. New meeting
 surfaces any older unresolved journal first. Quit asks users to finish/recover or

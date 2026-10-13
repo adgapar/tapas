@@ -4,9 +4,9 @@ import SwiftUI
 @MainActor
 final class PlateWindowController: NSWindowController, NSWindowDelegate {
     private var onResign: () -> Void = {}
-    static let homeSize = NSSize(width: 340, height: 460)
-    static let preferencesSize = NSSize(width: 400, height: 620)
-    static let size = NSSize(width: 510, height: 760)
+    /// The home card, plus room for its printed shadow. House rules use the same card.
+    static let homeSize = NSSize(width: 540, height: 720)
+    static let size = NSSize(width: 560, height: 780)
     private let model: PlateModel
     init(model: PlateModel, actions: PlateActions, actaController: ActaController? = nil) {
         self.model = model
@@ -35,10 +35,16 @@ final class PlateWindowController: NSWindowController, NSWindowDelegate {
         }
         window.setFrame(NSRect(origin: origin, size: size), display: true)
     }
-    func show() {
+    /// Hangs the card below the menu bar pintxo when there is one; otherwise centres it.
+    func show(anchor: NSRect? = nil) {
         guard let window else { return }
         if window.isMiniaturized { window.deminiaturize(nil) }
         placeFloatingWindow(window, preferred: model.preferredWindowSize)
+        if let anchor, let area = (NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main)?.visibleFrame {
+            let size = window.frame.size
+            let x = min(max(anchor.maxX - size.width + 10, area.minX + 8), area.maxX - size.width - 8)
+            window.setFrameOrigin(NSPoint(x: x, y: area.maxY - size.height - 4))
+        }
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
     }

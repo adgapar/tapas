@@ -13,7 +13,7 @@ There is no Tapas account or cloud transcript store.
 - Optional history is saved as redacted Markdown in `~/Documents/tapas/dictado/`.
   Redaction can make mistakes. Pasted and explicitly copied/exported text retains
   the recognized words.
-- Preferences, downloaded voice models and recent-history files remain local.
+- Settings, downloaded voice models and recent-history files remain local.
 - Dictado failed delivery retains text in memory for copy, export or retry. Unsaved
   recovery does not survive quitting or a crash.
 - Local diagnostic logs record permission/shortcut status, microphone format and
@@ -32,7 +32,7 @@ activity and dismissal state stay in memory; no activity history is saved or sen
 elsewhere. This can detect microphone use that is not a meeting.
 
 A suggestion offers Start Acta or Not now. Recording begins only after Start Acta
-and any required permissions. Turn suggestions off in Preferences to stop these
+and any required permissions. Turn suggestions off in House rules to stop these
 checks. No calendar, meeting-service account, integration or MCP is needed.
 
 ## Acta meeting files and recovery
@@ -57,7 +57,7 @@ up to the last five seconds before the next chunk is journaled.
 
 ## Transcript discovery and assistant skills
 
-The transcript folder is selectable in Preferences; the paths above are defaults.
+The transcript folder is selectable in House rules; the paths above are defaults.
 Tapas writes local discovery indexes containing recording dates, durations, titles
 when supplied, and short excerpts of saved text. Dictado previews use its redacted
 saved text; Acta previews contain unredacted meeting text. Indexes live beside the
@@ -97,4 +97,4 @@ Tapas uses Sparkle to check a public GitHub release feed and download signed
 updates over HTTPS. GitHub receives normal network request information (including
 your IP address); Sparkle sends its updater and app version in the user agent.
 System profiling is disabled. No audio, transcripts or meeting metadata are sent
-for updates. Automatic checks and downloads can be disabled in Preferences.
+for updates. Automatic checks and downloads can be disabled in House rules.
